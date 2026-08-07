@@ -17,6 +17,7 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   login: (email: string, password: string, redirectTo?: string) => Promise<{ error?: string }>;
+  loginWithGoogle: () => Promise<void>;
   register: (data: {
     email: string;
     password: string;
@@ -25,6 +26,7 @@ interface AuthContextType {
     phone?: string;
   }) => Promise<{ error?: string }>;
   logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error?: string; success?: boolean }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -67,6 +69,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [router]
   );
 
+  const loginWithGoogle = useCallback(async () => {
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+  }, []);
+
   const register = useCallback(
     async (regData: {
       email: string;
@@ -88,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUser(data.user);
-      router.push(data.redirectTo || "/dashboard");
+      router.push(data.redirectTo || "/");
       return {};
     },
     [router]
@@ -100,8 +113,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/");
   }, [router]);
 
+  const resetPassword = useCallback(async (email: string) => {
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/actualizar-password`,
+      });
+      if (error) {
+        return { error: error.message };
+      }
+      return { success: true };
+    } catch {
+      return { error: "Error al enviar el email" };
+    }
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, loginWithGoogle, register, logout, resetPassword }}
+    >
       {children}
     </AuthContext.Provider>
   );

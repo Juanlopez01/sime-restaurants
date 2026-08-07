@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import { updateSession } from "@/lib/supabase/middleware";
 
-const PUBLIC_PATHS = ["/", "/login", "/registro", "/api/auth"];
+const isSupabaseConfigured = !!(
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
+
+const PUBLIC_PATHS = ["/", "/login", "/registro", "/reset-password", "/actualizar-password", "/crear-restaurante", "/api/auth", "/auth/callback"];
 
 function isPublic(pathname: string): boolean {
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return true;
   }
-  if (/^\/[^/]+\/menu(\/|$)/.test(pathname)) {
-    return true;
-  }
-  if (pathname.startsWith("/_next") || pathname.startsWith("/favicon")) {
-    return true;
-  }
-  // Staff auth API is public (PIN login)
-  if (/^\/api\/[^/]+\/auth$/.test(pathname)) {
-    return true;
-  }
+  if (/^\/[^/]+\/menu(\/|$)/.test(pathname)) return true;
+  if (pathname.startsWith("/_next") || pathname.startsWith("/favicon")) return true;
+  if (/^\/api\/[^/]+\/auth$/.test(pathname)) return true;
   return false;
 }
 
@@ -30,11 +29,16 @@ function parseSession(cookie: string | undefined): Record<string, string> | null
   return null;
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  let supabaseResponse = NextResponse.next({ request });
+  if (isSupabaseConfigured) {
+    ({ supabaseResponse } = await updateSession(request));
+  }
+
   if (isPublic(pathname)) {
-    return NextResponse.next();
+    return supabaseResponse;
   }
 
   const session = parseSession(request.cookies.get("mise-session")?.value);
@@ -45,16 +49,17 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Verify the owner is accessing their own restaurant
   const slugMatch = pathname.match(/^\/([^/]+)/);
   if (slugMatch && !pathname.startsWith("/api/")) {
     const requestedSlug = slugMatch[1];
     if (requestedSlug !== session.restaurantSlug) {
-      return NextResponse.redirect(new URL(`/${session.restaurantSlug}`, request.url));
+      return NextResponse.redirect(
+        new URL(`/${session.restaurantSlug}`, request.url)
+      );
     }
   }
 
-  return NextResponse.next();
+  return supabaseResponse;
 }
 
 export const config = {

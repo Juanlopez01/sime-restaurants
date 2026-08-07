@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase-server";
 import { demoRegister } from "@/lib/demo-auth-store";
 
@@ -11,7 +12,7 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, "");
 }
 
-function setSessionCookie(
+function setMiseSession(
   response: NextResponse,
   sessionData: Record<string, string>
 ) {
@@ -43,13 +44,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!isSupabaseConfigured) {
-    const result = demoRegister({
-      email,
-      password,
-      name,
-      restaurantName,
-      phone,
-    });
+    const result = demoRegister({ email, password, name, restaurantName, phone });
 
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 400 });
@@ -69,21 +64,23 @@ export async function POST(request: NextRequest) {
       user: sessionData,
       redirectTo: `/${result.restaurant.slug}/onboarding`,
     });
-    setSessionCookie(response, sessionData);
+    setMiseSession(response, sessionData);
     return response;
   }
 
-  // --- Supabase Auth ---
+  // Create Supabase Auth user
   const { data: authData, error: authError } =
     await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
+      user_metadata: { full_name: name },
     });
 
   if (authError) {
     const msg =
-      authError.message === "A user with this email address has already been registered"
+      authError.message ===
+      "A user with this email address has already been registered"
         ? "Ya existe una cuenta con ese email"
         : authError.message;
     return NextResponse.json({ error: msg }, { status: 400 });
@@ -91,6 +88,7 @@ export async function POST(request: NextRequest) {
 
   const authUser = authData.user;
 
+  // Create owner record
   const { data: owner, error: ownerError } = await supabaseAdmin
     .from("owners")
     .insert({ auth_id: authUser.id, email, name, phone: phone || null })
@@ -105,8 +103,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Create restaurant
   let slug = slugify(restaurantName);
-
   const { data: existing } = await supabaseAdmin
     .from("restaurants")
     .select("id")
@@ -137,6 +135,26 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Collect Supabase cookies to apply to the final response
+  const pendingCookies: { name: string; value: string; options: Record<string, unknown> }[] = [];
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          pendingCookies.push(...cookiesToSet);
+        },
+      },
+    }
+  );
+
+  await supabase.auth.signInWithPassword({ email, password });
+
   const sessionData = {
     userId: owner.id,
     email: owner.email,
@@ -149,8 +167,11 @@ export async function POST(request: NextRequest) {
 
   const response = NextResponse.json({
     user: sessionData,
-    redirectTo: `/${restaurant.slug}`,
+    redirectTo: `/${restaurant.slug}/onboarding`,
   });
-  setSessionCookie(response, sessionData);
+  pendingCookies.forEach(({ name, value, options }) =>
+    response.cookies.set(name, value, options)
+  );
+  setMiseSession(response, sessionData);
   return response;
 }
