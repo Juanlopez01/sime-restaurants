@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import type { TableWithStatus } from "@/types";
+import type { TableWithStatus, OrderWithItems } from "@/types";
 import { FloorMap } from "@/components/salon/FloorMap";
 import { useStaff } from "@/contexts/staff-context";
 import { PinLogin, StaffBadge } from "@/components/staff/PinLogin";
 import { useRealtime } from "@/hooks/use-realtime";
+import { useNotifications } from "@/hooks/use-notifications";
+import { NotificationToasts, useToasts } from "@/components/ui/NotificationToasts";
 
 export default function ComandaPage() {
   const params = useParams<{ slug: string }>();
@@ -16,6 +18,9 @@ export default function ComandaPage() {
   const [tables, setTables] = useState<TableWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
+  const { toasts, addToast, removeToast } = useToasts();
+  const { checkForReadyOrders } = useNotifications(addToast);
+  const prevOrdersRef = useRef<{ id: string; status: string }[]>([]);
 
   const fetchTables = useCallback(async () => {
     try {
@@ -30,12 +35,34 @@ export default function ComandaPage() {
     setLoading(false);
   }, [params.slug]);
 
+  const fetchOrdersForNotifications = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/${params.slug}/orders`);
+      if (res.ok) {
+        const data = await res.json();
+        const orders = data.orders as OrderWithItems[];
+
+        if (prevOrdersRef.current.length > 0) {
+          checkForReadyOrders(orders, prevOrdersRef.current);
+        }
+
+        prevOrdersRef.current = orders.map((o) => ({ id: o.id, status: o.status }));
+      }
+    } catch {}
+  }, [params.slug, checkForReadyOrders]);
+
+  const handleUpdate = useCallback(() => {
+    fetchTables();
+    fetchOrdersForNotifications();
+  }, [fetchTables, fetchOrdersForNotifications]);
+
   useEffect(() => {
     if (!staff) return;
     fetchTables();
-  }, [fetchTables, staff]);
+    fetchOrdersForNotifications();
+  }, [fetchTables, fetchOrdersForNotifications, staff]);
 
-  useRealtime({ table: "orders", onUpdate: fetchTables });
+  useRealtime({ table: "orders", onUpdate: handleUpdate });
 
   function handleTableClick(table: TableWithStatus) {
     router.push(`/${params.slug}/comanda/mesa/${table.id}`);
@@ -63,6 +90,8 @@ export default function ComandaPage() {
 
   return (
     <main className="min-h-screen bg-surface">
+      <NotificationToasts toasts={toasts} onDismiss={removeToast} />
+
       <header className="module-header">
         <div className="flex items-center gap-3">
           <Link href={`/${params.slug}`} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06] text-[#888] hover:text-white transition-colors">
