@@ -65,6 +65,21 @@ const NAV_ITEMS = [
     ),
   },
   {
+    href: "qr-menu",
+    label: "QR Menú",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]">
+        <rect x="2" y="2" width="8" height="8" rx="1" />
+        <rect x="14" y="2" width="8" height="8" rx="1" />
+        <rect x="2" y="14" width="8" height="8" rx="1" />
+        <rect x="14" y="14" width="4" height="4" rx="0.5" />
+        <rect x="20" y="14" width="2" height="2" rx="0.25" />
+        <rect x="14" y="20" width="2" height="2" rx="0.25" />
+        <rect x="20" y="20" width="2" height="2" rx="0.25" />
+      </svg>
+    ),
+  },
+  {
     href: "config",
     label: "Configuración",
     icon: (
