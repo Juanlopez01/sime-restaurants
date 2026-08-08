@@ -1,9 +1,10 @@
 interface MenuHeaderProps {
   restaurantName: string;
   address?: string | null;
+  tableNumber?: string | null;
 }
 
-export function MenuHeader({ restaurantName, address }: MenuHeaderProps) {
+export function MenuHeader({ restaurantName, address, tableNumber }: MenuHeaderProps) {
   return (
     <header className="bg-[#141414] px-6 py-10 text-center">
       <h1 className="font-display text-3xl font-bold tracking-tight text-white">
@@ -13,9 +14,15 @@ export function MenuHeader({ restaurantName, address }: MenuHeaderProps) {
         <p className="mt-1.5 text-sm tracking-wider text-[#666]">{address}</p>
       )}
       <div className="mx-auto mt-5 h-px w-16 bg-[#b49a5a]/50" />
-      <p className="mt-3 text-xs uppercase tracking-[0.2em] text-[#555]">
-        Carta
-      </p>
+      {tableNumber ? (
+        <p className="mt-3 text-xs uppercase tracking-[0.2em] text-[#b49a5a]">
+          Mesa {tableNumber}
+        </p>
+      ) : (
+        <p className="mt-3 text-xs uppercase tracking-[0.2em] text-[#555]">
+          Carta
+        </p>
+      )}
     </header>
   );
 }

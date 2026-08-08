@@ -4,10 +4,14 @@ import type { Product } from "@/types";
 
 interface ProductCardProps {
   product: Product;
+  quantity?: number;
+  onAdd?: (product: Product) => void;
+  onRemove?: (productId: string) => void;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, quantity = 0, onAdd, onRemove }: ProductCardProps) {
   const isUnavailable = !product.is_available;
+  const canOrder = !!onAdd && !isUnavailable;
 
   return (
     <div
@@ -41,6 +45,45 @@ export function ProductCard({ product }: ProductCardProps) {
           <span className="mt-2 inline-block rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-600">
             Agotado
           </span>
+        )}
+        {canOrder && (
+          <div className="mt-2 flex items-center gap-2">
+            {quantity > 0 ? (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => onRemove?.(product.id)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f0ede6] text-[#777] hover:bg-[#e8e5dd] active:bg-[#ddd9cf] transition-colors"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-4 w-4">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+                <span className="w-8 text-center text-sm font-bold text-[#1a1a1a] tabular-nums">
+                  {quantity}
+                </span>
+                <button
+                  onClick={() => onAdd(product)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[#b49a5a] text-white hover:bg-[#a08848] active:bg-[#8a7640] transition-colors"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-4 w-4">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => onAdd(product)}
+                className="flex items-center gap-1.5 rounded-full bg-[#141414] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#2a2a2a] active:bg-[#333] transition-colors"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-3.5 w-3.5">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Agregar
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

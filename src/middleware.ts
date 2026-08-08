@@ -13,6 +13,7 @@ function isPublic(pathname: string): boolean {
     return true;
   }
   if (/^\/[^/]+\/menu(\/|$)/.test(pathname)) return true;
+  if (/^\/api\/[^/]+\/customer-order$/.test(pathname)) return true;
   if (pathname.startsWith("/_next") || pathname.startsWith("/favicon")) return true;
   if (/^\/api\/[^/]+\/auth$/.test(pathname)) return true;
   return false;

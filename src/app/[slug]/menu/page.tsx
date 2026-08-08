@@ -8,6 +8,7 @@ import { MenuClient } from "@/components/menu/MenuClient";
 
 interface Props {
   params: { slug: string };
+  searchParams: { mesa?: string };
 }
 
 async function getMenuData(slug: string) {
@@ -67,23 +68,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function MenuPage({ params }: Props) {
+export default async function MenuPage({ params, searchParams }: Props) {
   const data = await getMenuData(params.slug);
 
   if (!data) {
     notFound();
   }
 
+  const tableNumber = searchParams.mesa ?? null;
+
   return (
     <div className="min-h-screen bg-surface">
       <MenuHeader
         restaurantName={data.restaurant.name}
         address={data.restaurant.address}
+        tableNumber={tableNumber}
       />
       <MenuClient
         slug={params.slug}
         restaurantId={data.restaurant.id}
         initialMenu={data.menu}
+        tableNumber={tableNumber}
       />
     </div>
   );

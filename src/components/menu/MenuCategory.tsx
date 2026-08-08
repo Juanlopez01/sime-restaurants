@@ -1,13 +1,21 @@
 "use client";
 
-import type { CategoryWithProducts } from "@/types";
+import type { CategoryWithProducts, Product } from "@/types";
 import { ProductCard } from "./ProductCard";
+
+interface CartItem {
+  product_id: string;
+  quantity: number;
+}
 
 interface MenuCategoryProps {
   category: CategoryWithProducts;
+  cart?: CartItem[];
+  onAdd?: (product: Product) => void;
+  onRemove?: (productId: string) => void;
 }
 
-export function MenuCategory({ category }: MenuCategoryProps) {
+export function MenuCategory({ category, cart, onAdd, onRemove }: MenuCategoryProps) {
   if (category.products.length === 0) return null;
 
   return (
@@ -16,9 +24,18 @@ export function MenuCategory({ category }: MenuCategoryProps) {
         {category.name}
       </h2>
       <div className="flex flex-col gap-2.5 px-4 py-3">
-        {category.products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
+        {category.products.map((product) => {
+          const qty = cart?.find((c) => c.product_id === product.id)?.quantity ?? 0;
+          return (
+            <ProductCard
+              key={product.id}
+              product={product}
+              quantity={qty}
+              onAdd={onAdd}
+              onRemove={onRemove}
+            />
+          );
+        })}
       </div>
     </section>
   );
