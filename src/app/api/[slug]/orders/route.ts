@@ -214,5 +214,64 @@ export async function PUT(
       .eq("order_id", id);
   }
 
+  // Deduct stock when order moves to in_kitchen
+  if (status === "in_kitchen") {
+    try {
+      const { data: orderItems } = await supabaseAdmin
+        .from("order_items")
+        .select("product_id, quantity")
+        .eq("order_id", id);
+
+      if (orderItems && orderItems.length > 0) {
+        const productIds = orderItems.map((i) => i.product_id);
+        const { data: links } = await supabaseAdmin
+          .from("product_ingredients")
+          .select("product_id, ingredient_id, quantity_needed")
+          .in("product_id", productIds);
+
+        if (links && links.length > 0) {
+          const deductions = new Map<string, number>();
+          for (const item of orderItems) {
+            const itemLinks = links.filter((l) => l.product_id === item.product_id);
+            for (const link of itemLinks) {
+              const amount = link.quantity_needed * item.quantity;
+              deductions.set(
+                link.ingredient_id,
+                (deductions.get(link.ingredient_id) ?? 0) + amount
+              );
+            }
+          }
+
+          for (const [ingredientId, amount] of deductions) {
+            await supabaseAdmin.rpc("decrement_stock", {
+              p_ingredient_id: ingredientId,
+              p_amount: amount,
+            }).then((res) => {
+              if (res.error) {
+                // Fallback: manual update if RPC doesn't exist
+                return supabaseAdmin
+                  .from("ingredients")
+                  .select("current_stock")
+                  .eq("id", ingredientId)
+                  .single()
+                  .then(({ data: ing }) => {
+                    if (ing) {
+                      const newStock = Math.max(0, Number(ing.current_stock) - amount);
+                      return supabaseAdmin
+                        .from("ingredients")
+                        .update({ current_stock: newStock, updated_at: new Date().toISOString() })
+                        .eq("id", ingredientId);
+                    }
+                  });
+              }
+            });
+          }
+        }
+      }
+    } catch {
+      // Stock deduction is best-effort — don't block the order
+    }
+  }
+
   return NextResponse.json({ order: data });
 }

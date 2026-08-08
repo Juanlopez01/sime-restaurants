@@ -65,6 +65,19 @@ const NAV_ITEMS = [
     ),
   },
   {
+    href: "inventario",
+    label: "Inventario",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]">
+        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+        <path d="M3 6h18" />
+        <path d="M16 10a4 4 0 01-8 0" />
+        <line x1="8" y1="14" x2="16" y2="14" />
+        <line x1="8" y1="17" x2="13" y2="17" />
+      </svg>
+    ),
+  },
+  {
     href: "qr-menu",
     label: "QR Menú",
     icon: (
