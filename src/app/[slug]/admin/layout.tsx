@@ -36,6 +36,15 @@ const NAV_ITEMS = [
     ),
   },
   {
+    href: "reportes",
+    label: "Reportes",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]">
+        <path d="M18 20V10M12 20V4M6 20v-6" />
+      </svg>
+    ),
+  },
+  {
     href: "historial",
     label: "Historial",
     icon: (
