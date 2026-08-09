@@ -32,10 +32,11 @@ export async function POST(
   }
 
   const body = await request.json();
-  const { table_id, method, amount } = body as {
+  const { table_id, method, amount, tip } = body as {
     table_id: string;
     method: PaymentMethod;
     amount: number;
+    tip?: number;
   };
 
   if (!table_id || !method || !amount) {
@@ -76,16 +77,21 @@ export async function POST(
 
   const orderId = activeOrders[0].id;
 
+  const insertData: Record<string, unknown> = {
+    restaurant_id: restaurantId,
+    order_id: orderId,
+    cashier_id: body.cashier_id ?? null,
+    method,
+    amount,
+    status: "completed",
+  };
+  if (tip && tip > 0) {
+    insertData.tip = tip;
+  }
+
   const { data: payment, error } = await supabaseAdmin
     .from("payments")
-    .insert({
-      restaurant_id: restaurantId,
-      order_id: orderId,
-      cashier_id: body.cashier_id ?? null,
-      method,
-      amount,
-      status: "completed",
-    })
+    .insert(insertData)
     .select()
     .single();
 

@@ -58,6 +58,8 @@ export default function CajaMesaPage() {
   const [processing, setProcessing] = useState(false);
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tipPercent, setTipPercent] = useState<number>(0);
+  const [customTip, setCustomTip] = useState("");
 
   useEffect(() => {
     fetch(`/api/${params.slug}/orders?table_id=${params.tableId}`)
@@ -70,7 +72,9 @@ export default function CajaMesaPage() {
   }, [params.slug, params.tableId]);
 
   const allItems = orders.flatMap((o) => o.items);
-  const total = allItems.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
+  const subtotal = allItems.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
+  const tipAmount = customTip ? parseFloat(customTip) || 0 : Math.round(subtotal * tipPercent / 100);
+  const total = subtotal + tipAmount;
 
   function printReceipt() {
     const tableNum = orders[0]?.table?.table_number ?? params.tableId.slice(0, 4);
@@ -82,6 +86,7 @@ export default function CajaMesaPage() {
       .map((i) => `<tr><td>${i.quantity}x ${i.product_name}</td><td style="text-align:right">$${(i.unit_price * i.quantity).toLocaleString("es-AR")}</td></tr>`)
       .join("");
 
+    const tipLine = tipAmount > 0 ? `<tr><td>Propina</td><td style="text-align:right">$${tipAmount.toLocaleString("es-AR")}</td></tr>` : "";
     w.document.write(`<!DOCTYPE html>
 <html><head><title>Recibo Mesa ${tableNum}</title>
 <style>
@@ -100,7 +105,7 @@ export default function CajaMesaPage() {
 <hr>
 <table>${items}</table>
 <hr>
-<table><tr class="total"><td>TOTAL</td><td style="text-align:right">$${total.toLocaleString("es-AR")}</td></tr></table>
+<table><tr><td>Subtotal</td><td style="text-align:right">$${subtotal.toLocaleString("es-AR")}</td></tr>${tipLine}<tr class="total"><td>TOTAL</td><td style="text-align:right">$${total.toLocaleString("es-AR")}</td></tr></table>
 <p style="font-size:11px;color:#666;text-align:center;margin-top:8px">Pago: ${METHODS[method] ?? method}</p>
 <p class="footer">Gracias por su visita</p>
 <script>window.print();</script>
@@ -115,7 +120,7 @@ export default function CajaMesaPage() {
       await fetch(`/api/${params.slug}/payments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ table_id: params.tableId, method, amount: total, cashier_id: staff?.id }),
+        body: JSON.stringify({ table_id: params.tableId, method, amount: total, tip: tipAmount, cashier_id: staff?.id }),
       });
       printReceipt();
     } catch { /* offline */ }
@@ -171,6 +176,44 @@ export default function CajaMesaPage() {
                 ))}
               </div>
             )}
+
+            {/* Tip selector */}
+            <div className="mt-4 border-t border-slate-100 pt-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#999] mb-2">Propina</p>
+              <div className="flex gap-2 mb-2">
+                {[0, 10, 15, 20].map((pct) => (
+                  <button
+                    key={pct}
+                    onClick={() => { setTipPercent(pct); setCustomTip(""); }}
+                    className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
+                      tipPercent === pct && !customTip
+                        ? "bg-[#b49a5a] text-white"
+                        : "bg-[#f5f3ee] text-[#777] hover:bg-[#ebe8e0]"
+                    }`}
+                  >
+                    {pct === 0 ? "Sin" : `${pct}%`}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[#999]">Otro:</span>
+                <div className="relative flex-1">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[#999]">$</span>
+                  <input
+                    type="number"
+                    value={customTip}
+                    onChange={(e) => { setCustomTip(e.target.value); setTipPercent(0); }}
+                    placeholder="0"
+                    className="w-full rounded-lg border border-[#e8e6e1] pl-6 pr-3 py-1.5 text-sm tabular-nums focus:border-[#b49a5a] focus:outline-none"
+                  />
+                </div>
+                {tipAmount > 0 && (
+                  <span className="text-sm font-semibold text-[#b49a5a] tabular-nums">
+                    +${tipAmount.toLocaleString("es-AR")}
+                  </span>
+                )}
+              </div>
+            </div>
 
             <div className="mt-4 flex justify-between border-t border-slate-100 pt-4">
               <span className="text-lg font-bold text-ink">Total</span>

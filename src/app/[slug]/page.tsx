@@ -136,6 +136,23 @@ interface DashboardStats {
   avgTicket: number;
 }
 
+interface LowStockItem {
+  name: string;
+  current_stock: number;
+  min_stock: number;
+  unit: string;
+}
+
+interface RecentOrder {
+  id: string;
+  order_number: number;
+  status: string;
+  created_at: string;
+  table?: { table_number: string };
+  waiter?: { name: string };
+  subtotal: number;
+}
+
 export default function RestaurantHome() {
   const params = useParams<{ slug: string }>();
   const { user, logout } = useAuth();
@@ -143,6 +160,28 @@ export default function RestaurantHome() {
   const firstName = user?.name?.split(" ")[0] || "Juan";
   const time = useCurrentTime();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [lowStock, setLowStock] = useState<LowStockItem[]>([]);
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+
+  const fetchExtras = useCallback(async () => {
+    try {
+      const [ingRes, ordRes] = await Promise.all([
+        fetch(`/api/${params.slug}/ingredients`),
+        fetch(`/api/${params.slug}/orders?all=true`),
+      ]);
+      if (ingRes.ok) {
+        const data = await ingRes.json();
+        const items = (data.ingredients ?? []).filter(
+          (i: LowStockItem) => i.current_stock <= i.min_stock && i.min_stock > 0
+        );
+        setLowStock(items);
+      }
+      if (ordRes.ok) {
+        const data = await ordRes.json();
+        setRecentOrders((data.orders ?? []).slice(0, 5));
+      }
+    } catch {}
+  }, [params.slug]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -174,9 +213,10 @@ export default function RestaurantHome() {
 
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(fetchStats, 30000);
+    fetchExtras();
+    const interval = setInterval(() => { fetchStats(); fetchExtras(); }, 30000);
     return () => clearInterval(interval);
-  }, [fetchStats]);
+  }, [fetchStats, fetchExtras]);
 
   const dateStr = new Date().toLocaleDateString("es-AR", {
     weekday: "long",
@@ -437,6 +477,86 @@ export default function RestaurantHome() {
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Low stock + Recent orders */}
+          <div className="mt-8 lg:mt-10 grid lg:grid-cols-2 gap-6">
+            {/* Low stock alerts */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#b49a5a] mb-4">
+                Stock bajo
+              </p>
+              {lowStock.length > 0 ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-2">
+                  {lowStock.map((item) => (
+                    <div key={item.name} className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-amber-900">{item.name}</span>
+                      <span className="text-xs font-bold tabular-nums text-amber-700">
+                        {item.current_stock} / {item.min_stock} {item.unit}
+                      </span>
+                    </div>
+                  ))}
+                  <Link
+                    href={`/${params.slug}/admin/inventario`}
+                    className="block text-center text-xs font-medium text-amber-700 hover:text-amber-900 pt-2 border-t border-amber-200"
+                  >
+                    Ver inventario →
+                  </Link>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-[#e8e6e1] bg-white p-4 text-center">
+                  <p className="text-sm text-[#999]">Todo el stock en orden</p>
+                </div>
+              )}
+            </div>
+
+            {/* Recent orders */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#b49a5a] mb-4">
+                Últimos pedidos
+              </p>
+              {recentOrders.length > 0 ? (
+                <div className="rounded-xl border border-[#e8e6e1] bg-white divide-y divide-[#f0ede6]">
+                  {recentOrders.map((order) => {
+                    const statusMap: Record<string, { label: string; color: string }> = {
+                      pending: { label: "Pendiente", color: "bg-amber-100 text-amber-700" },
+                      in_kitchen: { label: "En cocina", color: "bg-orange-100 text-orange-700" },
+                      ready: { label: "Listo", color: "bg-green-100 text-green-700" },
+                      delivered: { label: "Entregado", color: "bg-blue-100 text-blue-700" },
+                      cancelled: { label: "Cancelado", color: "bg-red-100 text-red-700" },
+                    };
+                    const s = statusMap[order.status] ?? { label: order.status, color: "bg-gray-100 text-gray-700" };
+                    const ago = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60000);
+                    const timeStr = ago < 1 ? "ahora" : ago < 60 ? `${ago}min` : `${Math.floor(ago / 60)}h`;
+                    return (
+                      <div key={order.id} className="flex items-center justify-between px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-bold text-[#1a1a1a] tabular-nums">
+                            #{order.order_number}
+                          </span>
+                          <span className="text-xs text-[#999]">
+                            Mesa {order.table?.table_number ?? "?"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium tabular-nums text-[#777]">
+                            ${Number(order.subtotal).toLocaleString("es-AR")}
+                          </span>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.color}`}>
+                            {s.label}
+                          </span>
+                          <span className="text-[10px] text-[#bbb] tabular-nums w-8 text-right">{timeStr}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-[#e8e6e1] bg-white p-4 text-center">
+                  <p className="text-sm text-[#999]">Sin pedidos hoy</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
