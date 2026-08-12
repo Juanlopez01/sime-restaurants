@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
-import type { OrderWithItems, OrderStatus } from "@/types";
+import { formatPrice } from "@/lib/format";
+import type { OrderWithItems } from "@/types";
 import { ORDER_STATUS_LABELS } from "@/lib/constants";
 
 const STATUS_FILTERS: { value: string; label: string }[] = [
@@ -73,7 +74,7 @@ export default function HistorialPage() {
           {orders.length} pedido{orders.length !== 1 ? "s" : ""}
           {totalSales > 0 && (
             <span className="ml-2 text-[#b49a5a] font-medium">
-              · ${totalSales.toLocaleString("es-AR")}
+              · {formatPrice(totalSales)}
             </span>
           )}
         </p>
@@ -152,7 +153,7 @@ export default function HistorialPage() {
                   </div>
                 </div>
                 <span className="text-sm font-semibold text-ink tabular-nums">
-                  ${order.subtotal.toLocaleString("es-AR")}
+                  {formatPrice(order.subtotal)}
                 </span>
                 <svg
                   viewBox="0 0 24 24"
@@ -186,10 +187,7 @@ export default function HistorialPage() {
                           )}
                         </span>
                         <span className="text-ink tabular-nums font-medium">
-                          $
-                          {(item.unit_price * item.quantity).toLocaleString(
-                            "es-AR"
-                          )}
+                          {formatPrice(item.unit_price * item.quantity)}
                         </span>
                       </div>
                     ))}
@@ -233,7 +231,7 @@ function printTicket(order: OrderWithItems) {
   const items = order.items
     .map(
       (i) =>
-        `<tr><td>${i.quantity}x ${i.product_name}</td><td style="text-align:right">$${(i.unit_price * i.quantity).toLocaleString("es-AR")}</td></tr>`
+        `<tr><td>${i.quantity}x ${i.product_name}</td><td style="text-align:right">${formatPrice(i.unit_price * i.quantity)}</td></tr>`
     )
     .join("");
 
@@ -255,7 +253,7 @@ function printTicket(order: OrderWithItems) {
 <hr>
 <table>${items}</table>
 <hr>
-<table><tr class="total"><td>TOTAL</td><td style="text-align:right">$${order.subtotal.toLocaleString("es-AR")}</td></tr></table>
+<table><tr class="total"><td>TOTAL</td><td style="text-align:right">${formatPrice(order.subtotal)}</td></tr></table>
 ${order.notes ? `<hr><p style="font-size:11px;color:#666">Nota: ${order.notes}</p>` : ""}
 <p class="footer">Gracias por su visita</p>
 <script>window.print();</script>

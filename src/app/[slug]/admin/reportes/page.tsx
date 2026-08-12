@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { formatPrice } from "@/lib/format";
 
 interface ReportData {
   totals: {
@@ -61,7 +62,7 @@ function getDateRange(preset: Preset): { from: string; to: string } {
 }
 
 function formatCurrency(n: number): string {
-  return "$" + Math.round(n).toLocaleString("es-AR");
+  return formatPrice(Math.round(n));
 }
 
 function formatShortDate(dateStr: string): string {

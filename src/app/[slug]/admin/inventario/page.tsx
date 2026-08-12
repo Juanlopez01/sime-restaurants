@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { formatPrice } from "@/lib/format";
 
 interface Ingredient {
   id: string;
@@ -312,7 +313,7 @@ export default function InventarioPage() {
                           </span>
                         </td>
                         <td className="py-3 text-right tabular-nums text-[#777] hidden sm:table-cell">{ing.min_stock}</td>
-                        <td className="py-3 text-right tabular-nums text-[#777] hidden sm:table-cell">${Number(ing.cost_per_unit).toLocaleString("es-AR")}</td>
+                        <td className="py-3 text-right tabular-nums text-[#777] hidden sm:table-cell">{formatPrice(Number(ing.cost_per_unit))}</td>
                         <td className="py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             {stockAdjust?.id === ing.id ? (
@@ -367,7 +368,7 @@ export default function InventarioPage() {
             >
               <option value="">Seleccioná un producto...</option>
               {products.map((p) => (
-                <option key={p.id} value={p.id}>{p.name} — ${Number(p.price).toLocaleString("es-AR")}</option>
+                <option key={p.id} value={p.id}>{p.name} — {formatPrice(Number(p.price))}</option>
               ))}
             </select>
           </div>

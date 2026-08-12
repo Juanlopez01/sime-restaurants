@@ -1,8 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-export async function POST(
-  _request: NextRequest,
-  { params: _ }: { params: { slug: string } }
-) {
+export async function POST() {
   return NextResponse.json({ message: "TODO" }, { status: 501 });
 }

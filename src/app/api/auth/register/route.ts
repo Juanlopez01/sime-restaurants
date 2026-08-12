@@ -2,28 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase-server";
 import { demoRegister } from "@/lib/demo-auth-store";
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
-function setMiseSession(
-  response: NextResponse,
-  sessionData: Record<string, string>
-) {
-  response.cookies.set("mise-session", JSON.stringify(sessionData), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
-}
+import { slugify } from "@/lib/utils";
+import { setMiseSession } from "@/lib/session";
 
 export async function POST(request: NextRequest) {
   const { email, password, name, restaurantName, phone } =

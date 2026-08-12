@@ -2,19 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase-server";
 import { demoLogin } from "@/lib/demo-auth-store";
-
-function setMiseSession(
-  response: NextResponse,
-  sessionData: Record<string, string>
-) {
-  response.cookies.set("mise-session", JSON.stringify(sessionData), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
-}
+import { setMiseSession } from "@/lib/session";
 
 export async function POST(request: NextRequest) {
   const { email, password } = await request.json();

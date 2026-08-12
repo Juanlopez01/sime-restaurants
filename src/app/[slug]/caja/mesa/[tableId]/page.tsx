@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { formatPrice } from "@/lib/format";
 import type { OrderWithItems, PaymentMethod } from "@/types";
 import { useStaff } from "@/contexts/staff-context";
 import { PinLogin } from "@/components/staff/PinLogin";
@@ -60,6 +61,10 @@ export default function CajaMesaPage() {
   const [loading, setLoading] = useState(true);
   const [tipPercent, setTipPercent] = useState<number>(0);
   const [customTip, setCustomTip] = useState("");
+  const [mpInitPoint, setMpInitPoint] = useState<string | null>(null);
+  const [mpWaiting, setMpWaiting] = useState(false);
+  const [mpError, setMpError] = useState<string | null>(null);
+  const mpPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     fetch(`/api/${params.slug}/orders?table_id=${params.tableId}`)
@@ -83,10 +88,10 @@ export default function CajaMesaPage() {
 
     const METHODS: Record<string, string> = { cash: "Efectivo", card: "Tarjeta", mp: "MercadoPago", transfer: "Transferencia" };
     const items = allItems
-      .map((i) => `<tr><td>${i.quantity}x ${i.product_name}</td><td style="text-align:right">$${(i.unit_price * i.quantity).toLocaleString("es-AR")}</td></tr>`)
+      .map((i) => `<tr><td>${i.quantity}x ${i.product_name}</td><td style="text-align:right">${formatPrice(i.unit_price * i.quantity)}</td></tr>`)
       .join("");
 
-    const tipLine = tipAmount > 0 ? `<tr><td>Propina</td><td style="text-align:right">$${tipAmount.toLocaleString("es-AR")}</td></tr>` : "";
+    const tipLine = tipAmount > 0 ? `<tr><td>Propina</td><td style="text-align:right">${formatPrice(tipAmount)}</td></tr>` : "";
     w.document.write(`<!DOCTYPE html>
 <html><head><title>Recibo Mesa ${tableNum}</title>
 <style>
@@ -105,7 +110,7 @@ export default function CajaMesaPage() {
 <hr>
 <table>${items}</table>
 <hr>
-<table><tr><td>Subtotal</td><td style="text-align:right">$${subtotal.toLocaleString("es-AR")}</td></tr>${tipLine}<tr class="total"><td>TOTAL</td><td style="text-align:right">$${total.toLocaleString("es-AR")}</td></tr></table>
+<table><tr><td>Subtotal</td><td style="text-align:right">${formatPrice(subtotal)}</td></tr>${tipLine}<tr class="total"><td>TOTAL</td><td style="text-align:right">${formatPrice(total)}</td></tr></table>
 <p style="font-size:11px;color:#666;text-align:center;margin-top:8px">Pago: ${METHODS[method] ?? method}</p>
 <p class="footer">Gracias por su visita</p>
 <script>window.print();</script>
@@ -113,8 +118,58 @@ export default function CajaMesaPage() {
     w.document.close();
   }
 
+  const checkMpPayment = useCallback(async () => {
+    const res = await fetch(`/api/${params.slug}/orders?table_id=${params.tableId}`);
+    const data = await res.json();
+    const active = (data.orders as OrderWithItems[]).filter(
+      (o) => o.status !== "delivered" && o.status !== "cancelled"
+    );
+    if (active.length === 0) {
+      if (mpPollRef.current) clearInterval(mpPollRef.current);
+      setMpWaiting(false);
+      setMpInitPoint(null);
+      router.push(`/${params.slug}/caja`);
+    }
+  }, [params.slug, params.tableId, router]);
+
+  useEffect(() => {
+    return () => {
+      if (mpPollRef.current) clearInterval(mpPollRef.current);
+    };
+  }, []);
+
   async function handlePayment() {
     if (total === 0) return;
+
+    if (method === "mp") {
+      setProcessing(true);
+      setMpError(null);
+      try {
+        const res = await fetch(`/api/${params.slug}/mp-preference`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            table_id: params.tableId,
+            order_ids: orders.map((o) => o.id),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setMpError(data.error || "Error al crear el pago");
+          setProcessing(false);
+          return;
+        }
+        setMpInitPoint(data.init_point);
+        setMpWaiting(true);
+        setProcessing(false);
+        mpPollRef.current = setInterval(checkMpPayment, 5000);
+      } catch {
+        setMpError("Error de conexión");
+        setProcessing(false);
+      }
+      return;
+    }
+
     setProcessing(true);
     try {
       await fetch(`/api/${params.slug}/payments`, {
@@ -126,6 +181,13 @@ export default function CajaMesaPage() {
     } catch { /* offline */ }
     setProcessing(false);
     router.push(`/${params.slug}/caja`);
+  }
+
+  function cancelMpPayment() {
+    if (mpPollRef.current) clearInterval(mpPollRef.current);
+    setMpWaiting(false);
+    setMpInitPoint(null);
+    setMpError(null);
   }
 
   if (staffLoading) return null;
@@ -171,7 +233,7 @@ export default function CajaMesaPage() {
                 {allItems.map((item) => (
                   <div key={item.id} className="flex items-center justify-between text-sm">
                     <span className="text-ink-muted">{item.quantity}x {item.product_name}</span>
-                    <span className="text-ink font-medium tabular-nums">${(item.unit_price * item.quantity).toLocaleString("es-AR")}</span>
+                    <span className="text-ink font-medium tabular-nums">{formatPrice(item.unit_price * item.quantity)}</span>
                   </div>
                 ))}
               </div>
@@ -209,7 +271,7 @@ export default function CajaMesaPage() {
                 </div>
                 {tipAmount > 0 && (
                   <span className="text-sm font-semibold text-[#b49a5a] tabular-nums">
-                    +${tipAmount.toLocaleString("es-AR")}
+                    +{formatPrice(tipAmount)}
                   </span>
                 )}
               </div>
@@ -217,7 +279,7 @@ export default function CajaMesaPage() {
 
             <div className="mt-4 flex justify-between border-t border-slate-100 pt-4">
               <span className="text-lg font-bold text-ink">Total</span>
-              <span className="text-lg font-bold tabular-nums text-[#b49a5a]">${total.toLocaleString("es-AR")}</span>
+              <span className="text-lg font-bold tabular-nums text-[#b49a5a]">{formatPrice(total)}</span>
             </div>
           </div>
         </div>
@@ -255,11 +317,56 @@ export default function CajaMesaPage() {
             </div>
           </div>
 
+          {mpError && (
+            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3">
+              <p className="text-sm text-red-700">{mpError}</p>
+            </div>
+          )}
+
+          {mpWaiting && mpInitPoint && (
+            <div className="card card-body space-y-4 text-center">
+              <div className="mx-auto h-10 w-10 rounded-full bg-[#009ee3]/10 flex items-center justify-center">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#009ee3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                  <rect x="5" y="2" width="14" height="20" rx="2" />
+                  <path d="M12 18h.01" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-ink">Esperando pago de MercadoPago</p>
+                <p className="text-xs text-ink-faint mt-1">El cliente debe completar el pago desde el link</p>
+              </div>
+              <a
+                href={mpInitPoint}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary w-full bg-[#009ee3] hover:bg-[#0087cd] inline-flex items-center justify-center gap-2"
+              >
+                Abrir link de pago
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </a>
+              <div className="flex items-center gap-2 justify-center text-xs text-ink-faint">
+                <div className="h-3 w-3 animate-spin rounded-full border-2 border-[#e8e6e1] border-t-[#009ee3]" />
+                Verificando pago automáticamente...
+              </div>
+              <button
+                onClick={cancelMpPayment}
+                className="text-sm text-red-500 hover:text-red-700 font-medium transition-colors"
+              >
+                Cancelar y elegir otro método
+              </button>
+            </div>
+          )}
+
           {/* Desktop total + button inline */}
+          {!mpWaiting && (
           <div className="hidden lg:block">
             <div className="flex justify-between items-center mb-4 pt-4 border-t border-slate-200">
               <span className="text-lg font-bold text-ink">Total</span>
-              <span className="text-2xl font-bold tabular-nums text-[#b49a5a]">${total.toLocaleString("es-AR")}</span>
+              <span className="text-2xl font-bold tabular-nums text-[#b49a5a]">{formatPrice(total)}</span>
             </div>
             <button
               onClick={handlePayment}
@@ -274,14 +381,16 @@ export default function CajaMesaPage() {
               ) : total === 0 ? (
                 "Sin pedidos"
               ) : (
-                `Cobrar $${total.toLocaleString("es-AR")}`
+                `Cobrar ${formatPrice(total)}`
               )}
             </button>
           </div>
+          )}
         </div>
       </div>
 
       {/* Mobile sticky bottom */}
+      {!mpWaiting && (
       <div className="lg:hidden border-t border-slate-200 bg-white px-5 py-4 shadow-float">
         <button
           onClick={handlePayment}
@@ -296,10 +405,11 @@ export default function CajaMesaPage() {
           ) : total === 0 ? (
             "Sin pedidos"
           ) : (
-            `Cobrar $${total.toLocaleString("es-AR")}`
+            `Cobrar ${formatPrice(total)}`
           )}
         </button>
       </div>
+      )}
     </main>
   );
 }

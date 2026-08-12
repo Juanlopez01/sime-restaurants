@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { formatPrice } from "@/lib/format";
 import type { CategoryWithProducts, OrderWithItems } from "@/types";
 import { ORDER_STATUS_LABELS } from "@/lib/constants";
 import { useStaff } from "@/contexts/staff-context";
@@ -138,7 +139,7 @@ export default function ComandaMesaPage() {
           >
             <div>
               <span className="text-sm font-medium text-ink">{product.name}</span>
-              <span className="ml-2 text-sm text-ink-faint tabular-nums">${product.price.toLocaleString("es-AR")}</span>
+              <span className="ml-2 text-sm text-ink-faint tabular-nums">{formatPrice(product.price)}</span>
             </div>
             {inCart && (
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#141414] text-xs font-bold text-white">
@@ -164,7 +165,7 @@ export default function ComandaMesaPage() {
             </div>
             <span className="flex-1 truncate">{item.product_name}</span>
             <input type="text" placeholder="Nota..." value={item.notes} onChange={(e) => updateItemNotes(item.product_id, e.target.value)} className="w-24 input py-1.5 text-xs" />
-            <span className="font-medium tabular-nums text-ink-muted">${(item.unit_price * item.quantity).toLocaleString("es-AR")}</span>
+            <span className="font-medium tabular-nums text-ink-muted">{formatPrice(item.unit_price * item.quantity)}</span>
             <button onClick={() => removeItem(item.product_id)} className="text-red-400 hover:text-red-600 font-bold touch-target transition-colors">x</button>
           </div>
         ))}
@@ -173,13 +174,13 @@ export default function ComandaMesaPage() {
       <input type="text" placeholder="Notas generales del pedido..." value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} className="input" />
 
       <div className="flex items-center justify-between lg:pt-2 lg:border-t lg:border-slate-100">
-        <span className="hidden lg:block text-lg font-bold text-ink tabular-nums">${total.toLocaleString("es-AR")}</span>
+        <span className="hidden lg:block text-lg font-bold text-ink tabular-nums">{formatPrice(total)}</span>
         <button
           onClick={sendOrder}
           disabled={sending}
           className="btn-primary w-full lg:w-auto"
         >
-          {sending ? "Enviando..." : `Enviar pedido · $${total.toLocaleString("es-AR")}`}
+          {sending ? "Enviando..." : `Enviar pedido · ${formatPrice(total)}`}
         </button>
       </div>
     </div>
@@ -218,7 +219,7 @@ export default function ComandaMesaPage() {
                     #{order.order_number} — {ORDER_STATUS_LABELS[order.status] ?? order.status}
                   </span>
                   <span className="text-xs text-ink-faint tabular-nums">
-                    ${order.subtotal.toLocaleString("es-AR")}
+                    {formatPrice(order.subtotal)}
                   </span>
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-ink-muted">
@@ -269,7 +270,7 @@ export default function ComandaMesaPage() {
                   >
                     <div>
                       <span className="text-sm font-medium text-ink">{product.name}</span>
-                      <span className="block text-sm text-ink-faint tabular-nums mt-0.5">${product.price.toLocaleString("es-AR")}</span>
+                      <span className="block text-sm text-ink-faint tabular-nums mt-0.5">{formatPrice(product.price)}</span>
                     </div>
                     {inCart && (
                       <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#141414] text-xs font-bold text-white">

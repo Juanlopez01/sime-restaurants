@@ -5,9 +5,11 @@ import type { CategoryWithProducts } from "@/types";
 
 interface CategoryNavProps {
   categories: CategoryWithProducts[];
+  bgColor?: string;
+  accentColor?: string;
 }
 
-export function CategoryNav({ categories }: CategoryNavProps) {
+export function CategoryNav({ categories, bgColor = "#141414", accentColor = "#b49a5a" }: CategoryNavProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const navRef = useRef<HTMLDivElement>(null);
 
@@ -43,8 +45,8 @@ export function CategoryNav({ categories }: CategoryNavProps) {
   return (
     <nav
       ref={navRef}
-      className="sticky top-0 z-20 flex gap-1.5 overflow-x-auto bg-[#141414] px-4 py-2.5 scrollbar-hide"
-      style={{ WebkitOverflowScrolling: "touch" }}
+      className="sticky top-0 z-20 flex gap-1.5 overflow-x-auto px-4 py-2.5 scrollbar-hide"
+      style={{ backgroundColor: bgColor, WebkitOverflowScrolling: "touch" }}
     >
       {visibleCategories.map((cat) => (
         <button
@@ -55,11 +57,12 @@ export function CategoryNav({ categories }: CategoryNavProps) {
               .getElementById(`cat-${cat.id}`)
               ?.scrollIntoView({ behavior: "smooth" });
           }}
-          className={`pill flex-shrink-0 transition-colors ${
+          className="pill flex-shrink-0 transition-colors"
+          style={
             activeId === cat.id
-              ? "bg-[#b49a5a] text-white font-semibold"
-              : "bg-white/[0.06] text-[#999] active:bg-white/10"
-          }`}
+              ? { backgroundColor: accentColor, color: "#fff", fontWeight: 600 }
+              : { backgroundColor: "rgba(255,255,255,0.06)", color: "#999" }
+          }
         >
           {cat.name}
         </button>

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { Product } from "@/types";
+import { type Locale, t } from "@/lib/i18n";
+import { formatPrice } from "@/lib/format";
 
 interface CartItem {
   product_id: string;
@@ -18,6 +20,9 @@ interface CartBarProps {
   onRemove: (productId: string) => void;
   onAdd: (product: Product) => void;
   products: Product[];
+  locale?: Locale;
+  accentColor?: string;
+  bgColor?: string;
 }
 
 type OrderState = "idle" | "review" | "sending" | "sent" | "error";
@@ -30,6 +35,9 @@ export function CartBar({
   onRemove,
   onAdd,
   products,
+  locale = "es",
+  accentColor = "#b49a5a",
+  bgColor = "#141414",
 }: CartBarProps) {
   const [state, setState] = useState<OrderState>("idle");
   const [notes, setNotes] = useState("");
@@ -81,7 +89,7 @@ export function CartBar({
             </svg>
           </div>
           <h3 className="text-xl font-bold text-[#1a1a1a]">
-            Pedido enviado
+            {t(locale, "order_sent")}
           </h3>
           {orderNumber && (
             <p className="mt-1 text-3xl font-bold text-[#b49a5a] tabular-nums">
@@ -89,8 +97,7 @@ export function CartBar({
             </p>
           )}
           <p className="mt-3 text-sm text-[#777]">
-            Tu pedido fue recibido y ya está siendo preparado. Te lo llevaremos
-            a la mesa {tableNumber}.
+            {t(locale, "order_sent_desc")}
           </p>
           <button
             onClick={() => {
@@ -100,7 +107,7 @@ export function CartBar({
             }}
             className="mt-6 w-full rounded-xl bg-[#141414] py-3 text-sm font-semibold text-white hover:bg-[#2a2a2a] transition-colors"
           >
-            Hacer otro pedido
+            {t(locale, "new_order")}
           </button>
         </div>
       </div>
@@ -113,7 +120,7 @@ export function CartBar({
         <div className="flex-1" onClick={() => state !== "sending" && setState("idle")} />
         <div className="w-full max-h-[85vh] rounded-t-2xl bg-white shadow-xl flex flex-col">
           <div className="flex items-center justify-between border-b border-[#e8e6e1] px-5 py-4">
-            <h3 className="text-lg font-bold text-[#1a1a1a]">Tu pedido</h3>
+            <h3 className="text-lg font-bold text-[#1a1a1a]">{t(locale, "your_order")}</h3>
             <button
               onClick={() => setState("idle")}
               disabled={state === "sending"}
@@ -136,7 +143,7 @@ export function CartBar({
                       {item.product_name}
                     </p>
                     <p className="text-xs text-[#999] tabular-nums">
-                      ${item.unit_price.toLocaleString("es-AR")} c/u
+                      {formatPrice(item.unit_price)} c/u
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
@@ -155,7 +162,8 @@ export function CartBar({
                     <button
                       onClick={() => product && onAdd(product)}
                       disabled={state === "sending"}
-                      className="flex h-7 w-7 items-center justify-center rounded-full bg-[#b49a5a] text-white hover:bg-[#a08848] transition-colors disabled:opacity-50"
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-white transition-colors disabled:opacity-50"
+                      style={{ backgroundColor: accentColor }}
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-3.5 w-3.5">
                         <line x1="12" y1="5" x2="12" y2="19" />
@@ -164,7 +172,7 @@ export function CartBar({
                     </button>
                   </div>
                   <span className="w-20 text-right text-sm font-semibold text-[#1a1a1a] tabular-nums">
-                    ${(item.unit_price * item.quantity).toLocaleString("es-AR")}
+                    {formatPrice(item.unit_price * item.quantity)}
                   </span>
                 </div>
               );
@@ -172,13 +180,13 @@ export function CartBar({
 
             <div className="pt-3">
               <label className="text-xs font-medium text-[#999] uppercase tracking-wider">
-                Notas (opcional)
+                {t(locale, "notes")}
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 disabled={state === "sending"}
-                placeholder="Sin sal, bien cocido, etc."
+                placeholder={locale === "en" ? "No salt, well done, etc." : locale === "pt" ? "Sem sal, bem passado, etc." : "Sin sal, bien cocido, etc."}
                 className="mt-1 w-full rounded-lg border border-[#e8e6e1] px-3 py-2 text-sm text-[#1a1a1a] placeholder:text-[#ccc] focus:border-[#b49a5a] focus:outline-none resize-none disabled:opacity-50"
                 rows={2}
               />
@@ -186,30 +194,31 @@ export function CartBar({
 
             {state === "error" && (
               <p className="text-sm text-red-600 font-medium">
-                Hubo un error al enviar el pedido. Intentá de nuevo.
+                {locale === "en" ? "Error sending order. Please try again." : locale === "pt" ? "Erro ao enviar o pedido. Tente novamente." : "Hubo un error al enviar el pedido. Intentá de nuevo."}
               </p>
             )}
           </div>
 
           <div className="border-t border-[#e8e6e1] px-5 py-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-[#777]">Total</span>
+              <span className="text-sm font-medium text-[#777]">{t(locale, "total")}</span>
               <span className="text-xl font-bold text-[#1a1a1a] tabular-nums">
-                ${totalPrice.toLocaleString("es-AR")}
+                {formatPrice(totalPrice)}
               </span>
             </div>
             <button
               onClick={handleSubmit}
               disabled={state === "sending"}
-              className="w-full rounded-xl bg-[#b49a5a] py-3.5 text-sm font-bold text-white hover:bg-[#a08848] active:bg-[#8a7640] transition-colors disabled:opacity-70"
+              className="w-full rounded-xl py-3.5 text-sm font-bold text-white transition-colors disabled:opacity-70"
+              style={{ backgroundColor: accentColor }}
             >
               {state === "sending" ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Enviando...
+                  {t(locale, "sending")}
                 </span>
               ) : (
-                "Confirmar pedido"
+                t(locale, "confirm_order")
               )}
             </button>
           </div>
@@ -222,16 +231,17 @@ export function CartBar({
     <div className="fixed bottom-0 inset-x-0 z-40 px-4 pb-4 safe-bottom">
       <button
         onClick={() => setState("review")}
-        className="w-full flex items-center justify-between rounded-2xl bg-[#141414] px-5 py-4 shadow-lg shadow-black/20 hover:bg-[#1e1e1e] active:bg-[#252525] transition-colors"
+        className="w-full flex items-center justify-between rounded-2xl px-5 py-4 shadow-lg shadow-black/20 transition-colors"
+        style={{ backgroundColor: bgColor }}
       >
         <div className="flex items-center gap-3">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#b49a5a] text-xs font-bold text-white tabular-nums">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white tabular-nums" style={{ backgroundColor: accentColor }}>
             {totalItems}
           </span>
-          <span className="text-sm font-semibold text-white">Ver pedido</span>
+          <span className="text-sm font-semibold text-white">{t(locale, "view_order")}</span>
         </div>
         <span className="text-sm font-bold text-white tabular-nums">
-          ${totalPrice.toLocaleString("es-AR")}
+          {formatPrice(totalPrice)}
         </span>
       </button>
     </div>

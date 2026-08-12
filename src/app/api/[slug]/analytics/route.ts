@@ -1,16 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase-server";
-
-async function getRestaurantId(slug: string): Promise<string | null> {
-  if (!isSupabaseConfigured) return null;
-  const { data } = await supabaseAdmin
-    .from("restaurants")
-    .select("id")
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .single();
-  return data?.id ?? null;
-}
+import { supabaseAdmin } from "@/lib/supabase-server";
+import { getRestaurantId } from "@/lib/restaurant";
 
 export async function GET(
   request: NextRequest,
@@ -40,7 +30,7 @@ export async function GET(
 
   const tableStats: Record<string, { table_number: string; total_orders: number; total_spent: number; last_visit: string }> = {};
   for (const o of orders ?? []) {
-    const tn = (o.table as { table_number: string } | null)?.table_number ?? "?";
+    const tn = (o.table as unknown as { table_number: string } | null)?.table_number ?? "?";
     if (!tableStats[o.table_id]) {
       tableStats[o.table_id] = { table_number: tn, total_orders: 0, total_spent: 0, last_visit: o.created_at };
     }

@@ -3,6 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import type { CategoryWithProducts, Product } from "@/types";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase-client";
+import { type Locale, detectLocale, t } from "@/lib/i18n";
+import type { BrandTheme } from "@/app/[slug]/menu/page";
+import { MenuHeader } from "./MenuHeader";
 import { CategoryNav } from "./CategoryNav";
 import { MenuCategory } from "./MenuCategory";
 import { CartBar } from "./CartBar";
@@ -17,15 +20,28 @@ interface CartItem {
 interface MenuClientProps {
   slug: string;
   restaurantId: string;
+  restaurantName: string;
+  restaurantAddress?: string | null;
+  logoUrl?: string | null;
   initialMenu: CategoryWithProducts[];
   tableNumber?: string | null;
+  brand?: BrandTheme | null;
 }
 
-export function MenuClient({ slug, restaurantId, initialMenu, tableNumber }: MenuClientProps) {
+export function MenuClient({ slug, restaurantId, restaurantName, restaurantAddress, logoUrl, initialMenu, tableNumber, brand }: MenuClientProps) {
   const [menu, setMenu] = useState<CategoryWithProducts[]>(initialMenu);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [locale, setLocale] = useState<Locale>("es");
 
   const orderingEnabled = !!tableNumber;
+
+  const accentColor = brand?.color || "#b49a5a";
+  const bgColor = brand?.bg || "#141414";
+  const textColor = brand?.text || "#ffffff";
+
+  useEffect(() => {
+    setLocale(detectLocale());
+  }, []);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -107,7 +123,18 @@ export function MenuClient({ slug, restaurantId, initialMenu, tableNumber }: Men
 
   return (
     <>
-      <CategoryNav categories={menu} />
+      <MenuHeader
+        restaurantName={restaurantName}
+        address={restaurantAddress}
+        logoUrl={logoUrl}
+        tableNumber={tableNumber}
+        locale={locale}
+        onLocaleChange={setLocale}
+        accentColor={accentColor}
+        bgColor={bgColor}
+        textColor={textColor}
+      />
+      <CategoryNav categories={menu} bgColor={bgColor} accentColor={accentColor} />
       <main className={orderingEnabled ? "pb-24" : "pb-8"}>
         {menu.map((category) => (
           <MenuCategory
@@ -116,11 +143,13 @@ export function MenuClient({ slug, restaurantId, initialMenu, tableNumber }: Men
             cart={orderingEnabled ? cartForCategory : undefined}
             onAdd={orderingEnabled ? handleAdd : undefined}
             onRemove={orderingEnabled ? handleRemove : undefined}
+            locale={locale}
+            accentColor={accentColor}
           />
         ))}
         {menu.length === 0 && (
           <p className="px-4 py-12 text-center text-stone-400">
-            El menú estará disponible próximamente.
+            {t(locale, "menu_coming_soon")}
           </p>
         )}
       </main>
@@ -133,6 +162,9 @@ export function MenuClient({ slug, restaurantId, initialMenu, tableNumber }: Men
           onRemove={handleRemove}
           onAdd={handleAdd}
           products={allProducts}
+          locale={locale}
+          accentColor={accentColor}
+          bgColor={bgColor}
         />
       )}
     </>

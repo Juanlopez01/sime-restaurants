@@ -1,4 +1,5 @@
-import { DEMO_RESTAURANT, DEMO_TABLES, DEMO_MENU, DEMO_USERS } from "./demo-data";
+import { DEMO_RESTAURANT } from "./demo-data";
+import { slugify } from "./utils";
 
 interface DemoOwner {
   id: string;
@@ -20,15 +21,6 @@ interface DemoRestaurantRecord {
 let nextId = 100;
 function genId() {
   return `demo-${++nextId}`;
-}
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
 }
 
 const owners: DemoOwner[] = [

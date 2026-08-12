@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase-server";
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
+import { slugify } from "@/lib/utils";
+import { setMiseSession } from "@/lib/session";
 
 export async function POST(request: NextRequest) {
   if (!isSupabaseConfigured) {
@@ -103,13 +96,7 @@ export async function POST(request: NextRequest) {
     redirectTo: `/${restaurant.slug}/onboarding`,
   });
 
-  response.cookies.set("mise-session", JSON.stringify(sessionData), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
+  setMiseSession(response, sessionData);
 
   return response;
 }

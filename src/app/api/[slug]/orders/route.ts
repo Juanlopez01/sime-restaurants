@@ -6,19 +6,8 @@ import {
   createDemoOrder,
   updateDemoOrderStatus,
 } from "@/lib/demo-orders";
-
-async function getRestaurantId(slug: string): Promise<string | null> {
-  if (!isSupabaseConfigured) {
-    return slug === "la-ribera" ? "demo-la-ribera" : null;
-  }
-  const { data } = await supabaseAdmin
-    .from("restaurants")
-    .select("id")
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .single();
-  return data?.id ?? null;
-}
+import { getRestaurantId } from "@/lib/restaurant";
+import type { OrderStatus } from "@/types";
 
 export async function GET(
   request: NextRequest,
@@ -39,7 +28,7 @@ export async function GET(
   const includeAll = searchParams.get("all") === "true";
 
   if (!isSupabaseConfigured) {
-    const activeStatuses = ["pending", "in_kitchen", "ready"];
+    const activeStatuses: OrderStatus[] = ["pending", "in_kitchen", "ready"];
     const orders = tableId
       ? getDemoOrdersByTable(tableId)
       : getDemoOrders(includeAll ? undefined : activeStatuses);
@@ -242,7 +231,7 @@ export async function PUT(
             }
           }
 
-          for (const [ingredientId, amount] of deductions) {
+          for (const [ingredientId, amount] of Array.from(deductions)) {
             await supabaseAdmin.rpc("decrement_stock", {
               p_ingredient_id: ingredientId,
               p_amount: amount,

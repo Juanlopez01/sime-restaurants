@@ -5,7 +5,7 @@ async function getRestaurant(slug: string) {
   if (!isSupabaseConfigured) return null;
   const { data } = await supabaseAdmin
     .from("restaurants")
-    .select("id, name, address, phone, settings, billing_config")
+    .select("id, name, address, phone, logo_url, settings, billing_config, mp_access_token")
     .eq("slug", slug)
     .eq("is_active", true)
     .single();
@@ -26,8 +26,10 @@ export async function GET(
       name: restaurant.name,
       address: restaurant.address || "",
       phone: restaurant.phone || "",
+      logo_url: restaurant.logo_url || "",
       settings: restaurant.settings || { currency: "ARS", timezone: "America/Argentina/Buenos_Aires" },
       billing_config: restaurant.billing_config || {},
+      has_mp: !!restaurant.mp_access_token,
     },
   });
 }
@@ -51,8 +53,10 @@ export async function PUT(
   if (body.name !== undefined) updates.name = body.name;
   if (body.address !== undefined) updates.address = body.address;
   if (body.phone !== undefined) updates.phone = body.phone;
+  if (body.logo_url !== undefined) updates.logo_url = body.logo_url;
   if (body.settings !== undefined) updates.settings = body.settings;
   if (body.billing_config !== undefined) updates.billing_config = body.billing_config;
+  if (body.mp_access_token !== undefined) updates.mp_access_token = body.mp_access_token || null;
 
   const { error } = await supabaseAdmin
     .from("restaurants")

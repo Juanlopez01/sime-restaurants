@@ -1,11 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 
 export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0a0d14] flex items-center justify-center">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-[#b49a5a]" />
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
   const { login, loginWithGoogle } = useAuth();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("next") || undefined;

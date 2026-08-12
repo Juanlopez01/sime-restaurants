@@ -1,16 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase-server";
-
-async function getRestaurantId(slug: string): Promise<string | null> {
-  if (!isSupabaseConfigured) return null;
-  const { data } = await supabaseAdmin
-    .from("restaurants")
-    .select("id")
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .single();
-  return data?.id ?? null;
-}
+import { getRestaurantId } from "@/lib/restaurant";
 
 export async function GET(
   _request: NextRequest,
@@ -95,6 +85,7 @@ export async function PUT(
   const updates: Record<string, unknown> = {};
   if (body.name !== undefined) updates.name = body.name;
   if (body.display_order !== undefined) updates.display_order = body.display_order;
+  if (body.station !== undefined) updates.station = body.station;
 
   const { data, error } = await supabaseAdmin
     .from("categories")

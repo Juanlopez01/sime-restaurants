@@ -187,15 +187,3 @@ export interface CategoryWithProducts extends Category {
   products: Product[];
 }
 
-export type SyncStatus = 'online' | 'offline' | 'syncing';
-
-export interface SyncQueueEntry {
-  id: number;
-  entity_type: string;
-  entity_id: string;
-  action: 'create' | 'update';
-  payload: Record<string, unknown>;
-  status: 'pending' | 'synced' | 'error';
-  retry_count: number;
-  created_at: string;
-}

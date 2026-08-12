@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { formatPrice } from "@/lib/format";
 
 interface TopProduct {
   name: string;
@@ -100,7 +101,7 @@ export default function ClientesPage() {
                       <span className="text-xs font-bold text-[#ccc] w-5 text-right tabular-nums">{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <span className="text-sm font-medium text-[#1a1a1a] block truncate">{p.name}</span>
-                        <span className="text-xs text-[#999]">${p.revenue.toLocaleString("es-AR")} facturado</span>
+                        <span className="text-xs text-[#999]">{formatPrice(p.revenue)} facturado</span>
                       </div>
                       <span className="rounded-full bg-[#f5f3ee] px-2.5 py-1 text-xs font-bold tabular-nums text-[#1a1a1a]">
                         {p.quantity}
@@ -128,7 +129,7 @@ export default function ClientesPage() {
                       </div>
                       <div className="text-right">
                         <span className="text-sm font-bold tabular-nums text-[#1a1a1a]">
-                          ${t.total_spent.toLocaleString("es-AR")}
+                          {formatPrice(t.total_spent)}
                         </span>
                         <span className="block text-[10px] text-[#999]">
                           Última: {new Date(t.last_visit).toLocaleDateString("es-AR")}

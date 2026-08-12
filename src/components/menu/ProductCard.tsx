@@ -1,15 +1,19 @@
 "use client";
 
 import type { Product } from "@/types";
+import { type Locale, t } from "@/lib/i18n";
+import { formatPrice } from "@/lib/format";
 
 interface ProductCardProps {
   product: Product;
   quantity?: number;
   onAdd?: (product: Product) => void;
   onRemove?: (productId: string) => void;
+  locale?: Locale;
+  accentColor?: string;
 }
 
-export function ProductCard({ product, quantity = 0, onAdd, onRemove }: ProductCardProps) {
+export function ProductCard({ product, quantity = 0, onAdd, onRemove, locale = "es", accentColor = "#b49a5a" }: ProductCardProps) {
   const isUnavailable = !product.is_available;
   const canOrder = !!onAdd && !isUnavailable;
 
@@ -32,8 +36,8 @@ export function ProductCard({ product, quantity = 0, onAdd, onRemove }: ProductC
           <h3 className="text-base font-semibold text-ink leading-tight">
             {product.name}
           </h3>
-          <span className="flex-shrink-0 text-base font-bold text-[#b49a5a] tabular-nums">
-            ${product.price.toLocaleString("es-AR")}
+          <span className="flex-shrink-0 text-base font-bold tabular-nums" style={{ color: accentColor }}>
+            {formatPrice(product.price)}
           </span>
         </div>
         {product.description && (
@@ -43,7 +47,7 @@ export function ProductCard({ product, quantity = 0, onAdd, onRemove }: ProductC
         )}
         {isUnavailable && (
           <span className="mt-2 inline-block rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-600">
-            Agotado
+            {locale === "en" ? "Sold out" : locale === "pt" ? "Esgotado" : "Agotado"}
           </span>
         )}
         {canOrder && (
@@ -63,7 +67,8 @@ export function ProductCard({ product, quantity = 0, onAdd, onRemove }: ProductC
                 </span>
                 <button
                   onClick={() => onAdd(product)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[#b49a5a] text-white hover:bg-[#a08848] active:bg-[#8a7640] transition-colors"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-colors"
+                  style={{ backgroundColor: accentColor }}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-4 w-4">
                     <line x1="12" y1="5" x2="12" y2="19" />
@@ -80,7 +85,7 @@ export function ProductCard({ product, quantity = 0, onAdd, onRemove }: ProductC
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                Agregar
+                {t(locale, "add")}
               </button>
             )}
           </div>

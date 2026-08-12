@@ -1,6 +1,7 @@
 "use client";
 
 import type { CategoryWithProducts, Product } from "@/types";
+import type { Locale } from "@/lib/i18n";
 import { ProductCard } from "./ProductCard";
 
 interface CartItem {
@@ -13,9 +14,11 @@ interface MenuCategoryProps {
   cart?: CartItem[];
   onAdd?: (product: Product) => void;
   onRemove?: (productId: string) => void;
+  locale?: Locale;
+  accentColor?: string;
 }
 
-export function MenuCategory({ category, cart, onAdd, onRemove }: MenuCategoryProps) {
+export function MenuCategory({ category, cart, onAdd, onRemove, locale = "es", accentColor = "#b49a5a" }: MenuCategoryProps) {
   if (category.products.length === 0) return null;
 
   return (
@@ -33,6 +36,8 @@ export function MenuCategory({ category, cart, onAdd, onRemove }: MenuCategoryPr
               quantity={qty}
               onAdd={onAdd}
               onRemove={onRemove}
+              locale={locale}
+              accentColor={accentColor}
             />
           );
         })}

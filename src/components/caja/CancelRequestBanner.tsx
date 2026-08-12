@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import type { CancelRequestWithDetails } from "@/types";
 import { useRealtime } from "@/hooks/use-realtime";
+import { formatPrice } from "@/lib/format";
 import { useNotifications } from "@/hooks/use-notifications";
 import { NotificationToasts, useToasts } from "@/components/ui/NotificationToasts";
 
@@ -101,7 +102,7 @@ export function CancelRequestBanner({ cashierId }: { cashierId: string }) {
                       </span>
                     ))}
                     <span className="font-semibold text-ink">
-                      · ${req.order.subtotal.toLocaleString("es-AR")}
+                      · {formatPrice(req.order.subtotal)}
                     </span>
                   </div>
                 )}

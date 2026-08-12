@@ -31,16 +31,39 @@ const URGENCY_STYLES = {
   critical: "text-red-400 animate-pulse",
 };
 
-function KDSCard({
+interface KDSItem {
+  id: string;
+  order_id: string;
+  product_name: string;
+  quantity: number;
+  notes: string | null;
+  status: string;
+}
+
+interface KDSOrder {
+  order: {
+    id: string;
+    order_number: number;
+    status: string;
+    created_at: string;
+    notes: string | null;
+    table: { id: string; table_number: string } | null;
+    waiter: { id: string; name: string } | null;
+  };
+  items: KDSItem[];
+}
+
+type Station = "all" | "cocina" | "barra";
+type ViewMode = "items" | "orders";
+
+function ItemCard({
+  item,
   order,
-  onAction,
-  actionLabel,
-  actionColor,
+  onMarkItem,
 }: {
-  order: OrderWithItems;
-  onAction: () => void;
-  actionLabel: string;
-  actionColor: string;
+  item: KDSItem;
+  order: KDSOrder["order"];
+  onMarkItem: (itemId: string, status: string) => void;
 }) {
   const [elapsed, setElapsed] = useState(() => timeAgo(order.created_at));
   const [urgency, setUrgency] = useState(() => urgencyLevel(order.created_at));
@@ -53,11 +76,84 @@ function KDSCard({
     return () => clearInterval(interval);
   }, [order.created_at]);
 
+  const isPending = item.status === "pending";
+  const isPreparing = item.status === "preparing";
+
+  return (
+    <div className="rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-white">
+            Mesa {order.table?.table_number ?? "?"}
+          </span>
+          <span className="text-[10px] text-[#555] font-mono">#{order.order_number}</span>
+        </div>
+        <span className={`font-mono text-xs font-bold tabular-nums ${URGENCY_STYLES[urgency]}`}>
+          {elapsed}
+        </span>
+      </div>
+
+      <div className="flex items-start gap-2 mb-3">
+        <span className="text-lg font-bold text-white/70 tabular-nums">{item.quantity}×</span>
+        <div className="flex-1">
+          <span className="text-lg font-semibold text-white">{item.product_name}</span>
+          {item.notes && <p className="text-xs text-[#b49a5a] mt-0.5">→ {item.notes}</p>}
+        </div>
+      </div>
+
+      {order.notes && (
+        <p className="text-xs text-[#666] mb-3 border-t border-[#2a2a2a] pt-2">
+          {order.notes}
+        </p>
+      )}
+
+      {isPending && (
+        <button
+          onClick={() => onMarkItem(item.id, "preparing")}
+          className="w-full rounded-lg bg-orange-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-orange-700 transition-colors"
+        >
+          Preparar
+        </button>
+      )}
+      {isPreparing && (
+        <button
+          onClick={() => onMarkItem(item.id, "ready")}
+          className="w-full rounded-lg bg-green-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-green-700 transition-colors"
+        >
+          Listo
+        </button>
+      )}
+    </div>
+  );
+}
+
+function OrderCard({
+  kdsOrder,
+  onMarkItem,
+  onMarkOrder,
+}: {
+  kdsOrder: KDSOrder;
+  onMarkItem: (itemId: string, status: string) => void;
+  onMarkOrder: (orderId: string, status: string) => void;
+}) {
+  const { order, items } = kdsOrder;
+  const [elapsed, setElapsed] = useState(() => timeAgo(order.created_at));
+  const [urgency, setUrgency] = useState(() => urgencyLevel(order.created_at));
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(timeAgo(order.created_at));
+      setUrgency(urgencyLevel(order.created_at));
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [order.created_at]);
+
   const isQR = order.notes?.includes("[Pedido desde QR]");
+  const allReady = items.every((i) => i.status === "ready");
+  const someReady = items.some((i) => i.status === "ready");
 
   return (
     <div className="rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] overflow-hidden">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2a2a]">
         <div className="flex items-center gap-2">
           <span className="text-lg font-bold text-white">
@@ -65,9 +161,7 @@ function KDSCard({
           </span>
           <span className="text-xs text-[#555] font-mono">#{order.order_number}</span>
           {isQR && (
-            <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-purple-400">
-              QR
-            </span>
+            <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-purple-400">QR</span>
           )}
         </div>
         <span className={`font-mono text-sm font-bold tabular-nums ${URGENCY_STYLES[urgency]}`}>
@@ -75,40 +169,64 @@ function KDSCard({
         </span>
       </div>
 
-      {/* Items */}
       <div className="px-4 py-3 space-y-2">
-        {order.items.map((item) => (
-          <div key={item.id} className="flex items-start gap-2">
-            <span className="text-base font-bold text-white/70 w-6 text-right tabular-nums flex-shrink-0">
-              {item.quantity}×
-            </span>
-            <div className="flex-1 min-w-0">
-              <span className="text-base font-semibold text-white">{item.product_name}</span>
-              {item.notes && (
-                <p className="text-xs text-[#b49a5a] mt-0.5">→ {item.notes}</p>
-              )}
+        {items.map((item) => {
+          const statusColor =
+            item.status === "ready" ? "text-green-400" :
+            item.status === "preparing" ? "text-orange-400" : "text-white/50";
+          const statusIcon =
+            item.status === "ready" ? "✓" :
+            item.status === "preparing" ? "●" : "○";
+
+          return (
+            <div key={item.id} className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  if (item.status === "pending") onMarkItem(item.id, "preparing");
+                  else if (item.status === "preparing") onMarkItem(item.id, "ready");
+                }}
+                className={`text-base flex-shrink-0 ${statusColor} hover:scale-110 transition-transform`}
+                title={item.status === "pending" ? "Marcar preparando" : item.status === "preparing" ? "Marcar listo" : "Listo"}
+              >
+                {statusIcon}
+              </button>
+              <span className="text-base font-bold text-white/70 w-6 text-right tabular-nums flex-shrink-0">
+                {item.quantity}×
+              </span>
+              <div className="flex-1 min-w-0">
+                <span className={`text-base font-semibold ${item.status === "ready" ? "text-green-300 line-through opacity-60" : "text-white"}`}>
+                  {item.product_name}
+                </span>
+                {item.notes && <p className="text-xs text-[#b49a5a] mt-0.5">→ {item.notes}</p>}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Notes */}
       {order.notes && (
         <div className="px-4 pb-2">
-          <p className="text-xs text-[#b49a5a] border-t border-[#2a2a2a] pt-2">
-            {order.notes}
-          </p>
+          <p className="text-xs text-[#b49a5a] border-t border-[#2a2a2a] pt-2">{order.notes}</p>
         </div>
       )}
 
-      {/* Action */}
-      <div className="px-3 pb-3">
-        <button
-          onClick={onAction}
-          className={`w-full rounded-lg px-4 py-3 text-sm font-bold text-white transition-colors ${actionColor}`}
-        >
-          {actionLabel}
-        </button>
+      <div className="px-3 pb-3 flex gap-2">
+        {!allReady && !someReady && order.status === "pending" && (
+          <button
+            onClick={() => onMarkOrder(order.id, "in_kitchen")}
+            className="flex-1 rounded-lg bg-orange-600 px-3 py-3 text-sm font-bold text-white hover:bg-orange-700 transition-colors"
+          >
+            Todo a preparar
+          </button>
+        )}
+        {allReady && (
+          <button
+            onClick={() => onMarkOrder(order.id, "ready")}
+            className="flex-1 rounded-lg bg-green-600 px-3 py-3 text-sm font-bold text-white hover:bg-green-700 transition-colors"
+          >
+            Pedido completo
+          </button>
+        )}
       </div>
     </div>
   );
@@ -117,18 +235,30 @@ function KDSCard({
 export default function CocinaPage() {
   const params = useParams<{ slug: string }>();
   const { staff, loading: staffLoading, logout } = useStaff();
-  const [orders, setOrders] = useState<OrderWithItems[]>([]);
+  const [kdsOrders, setKdsOrders] = useState<KDSOrder[]>([]);
+  const [, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"columns" | "grid">("columns");
+  const [station, setStation] = useState<Station>("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("orders");
   const { toasts, addToast, removeToast } = useToasts();
   const { initialize, checkForNewOrders } = useNotifications(addToast);
   const initializedRef = useRef(false);
 
   const fetchOrders = useCallback(async () => {
     try {
-      const res = await fetch(`/api/${params.slug}/orders`);
-      if (res.ok) {
-        const data = await res.json();
+      const stationParam = station !== "all" ? `?station=${station}` : "";
+      const [itemsRes, ordersRes] = await Promise.all([
+        fetch(`/api/${params.slug}/order-items${stationParam}`),
+        fetch(`/api/${params.slug}/orders`),
+      ]);
+
+      if (itemsRes.ok) {
+        const data = await itemsRes.json();
+        setKdsOrders(data.orders ?? []);
+      }
+
+      if (ordersRes.ok) {
+        const data = await ordersRes.json();
         const fetched = data.orders as OrderWithItems[];
         setOrders(fetched);
 
@@ -141,7 +271,7 @@ export default function CocinaPage() {
       }
     } catch {}
     setLoading(false);
-  }, [params.slug, initialize, checkForNewOrders]);
+  }, [params.slug, station, initialize, checkForNewOrders]);
 
   useEffect(() => {
     if (!staff) return;
@@ -149,26 +279,38 @@ export default function CocinaPage() {
   }, [fetchOrders, staff]);
 
   useRealtime({ table: "orders", onUpdate: fetchOrders });
+  useRealtime({ table: "order_items", onUpdate: fetchOrders });
 
-  async function updateOrderStatus(orderId: string, status: string) {
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId ? { ...o, status: status as OrderWithItems["status"] } : o
-      )
+  async function handleMarkItem(itemId: string, status: string) {
+    setKdsOrders((prev) =>
+      prev.map((ko) => ({
+        ...ko,
+        items: ko.items.map((i) => (i.id === itemId ? { ...i, status } : i)),
+      }))
     );
+
+    try {
+      await fetch(`/api/${params.slug}/order-items`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item_id: itemId, status }),
+      });
+      fetchOrders();
+    } catch {}
+  }
+
+  async function handleMarkOrder(orderId: string, status: string) {
     try {
       await fetch(`/api/${params.slug}/orders`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: orderId, status }),
       });
+      fetchOrders();
     } catch {}
   }
 
-  const pending = orders.filter((o) => o.status === "pending");
-  const inKitchen = orders.filter((o) => o.status === "in_kitchen");
-  const ready = orders.filter((o) => o.status === "ready");
-  const totalActive = pending.length + inKitchen.length + ready.length;
+  const totalItems = kdsOrders.reduce((sum, ko) => sum + ko.items.filter((i) => i.status !== "ready").length, 0);
 
   if (staffLoading) return null;
   if (!staff) return <PinLogin module="Cocina" />;
@@ -184,41 +326,15 @@ export default function CocinaPage() {
     );
   }
 
-  const columns = [
-    {
-      title: "Pendiente",
-      count: pending.length,
-      color: "text-amber-400",
-      borderColor: "border-amber-500/30",
-      bgDot: "bg-amber-400",
-      orders: pending,
-      actionLabel: "Preparar",
-      actionColor: "bg-orange-600 hover:bg-orange-700",
-      onAction: (id: string) => updateOrderStatus(id, "in_kitchen"),
-    },
-    {
-      title: "En preparación",
-      count: inKitchen.length,
-      color: "text-orange-400",
-      borderColor: "border-orange-500/30",
-      bgDot: "bg-orange-400",
-      orders: inKitchen,
-      actionLabel: "Listo para servir",
-      actionColor: "bg-green-600 hover:bg-green-700",
-      onAction: (id: string) => updateOrderStatus(id, "ready"),
-    },
-    {
-      title: "Listo",
-      count: ready.length,
-      color: "text-green-400",
-      borderColor: "border-green-500/30",
-      bgDot: "bg-green-400",
-      orders: ready,
-      actionLabel: "Entregado",
-      actionColor: "bg-blue-600 hover:bg-blue-700",
-      onAction: (id: string) => updateOrderStatus(id, "delivered"),
-    },
-  ];
+  const pendingItems = kdsOrders.flatMap((ko) =>
+    ko.items.filter((i) => i.status === "pending").map((i) => ({ item: i, order: ko.order }))
+  );
+  const preparingItems = kdsOrders.flatMap((ko) =>
+    ko.items.filter((i) => i.status === "preparing").map((i) => ({ item: i, order: ko.order }))
+  );
+  const readyItems = kdsOrders.flatMap((ko) =>
+    ko.items.filter((i) => i.status === "ready").map((i) => ({ item: i, order: ko.order }))
+  );
 
   return (
     <main className="min-h-screen bg-[#0f0f0f]">
@@ -233,68 +349,78 @@ export default function CocinaPage() {
           </Link>
           <h1>Cocina</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <StaffBadge onLogout={logout} />
+
+          {/* Station filter */}
+          <div className="flex rounded-lg bg-white/[0.06] p-0.5">
+            {([["all", "Todo"], ["cocina", "Cocina"], ["barra", "Barra"]] as const).map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => setStation(val)}
+                className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${station === val ? "bg-white/10 text-white" : "text-[#666] hover:text-[#999]"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           {/* View toggle */}
           <div className="flex rounded-lg bg-white/[0.06] p-0.5">
             <button
-              onClick={() => setView("columns")}
-              className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${view === "columns" ? "bg-white/10 text-white" : "text-[#666] hover:text-[#999]"}`}
+              onClick={() => setViewMode("orders")}
+              className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${viewMode === "orders" ? "bg-white/10 text-white" : "text-[#666] hover:text-[#999]"}`}
             >
-              Columnas
+              Pedidos
             </button>
             <button
-              onClick={() => setView("grid")}
-              className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${view === "grid" ? "bg-white/10 text-white" : "text-[#666] hover:text-[#999]"}`}
+              onClick={() => setViewMode("items")}
+              className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${viewMode === "items" ? "bg-white/10 text-white" : "text-[#666] hover:text-[#999]"}`}
             >
-              Grilla
+              Items
             </button>
           </div>
+
           <span className="badge bg-white/[0.06] text-[#999]">
-            {totalActive} pedido{totalActive !== 1 ? "s" : ""}
+            {totalItems} pendiente{totalItems !== 1 ? "s" : ""}
           </span>
         </div>
       </header>
 
-      {totalActive === 0 ? (
+      {kdsOrders.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-[70vh] text-slate-600">
           <div className="h-16 w-16 rounded-full bg-slate-800 flex items-center justify-center mb-4">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8 text-emerald-500">
               <path d="M20 6L9 17l-5-5" />
             </svg>
           </div>
-          <p className="text-xl font-semibold text-slate-400">Sin pedidos pendientes</p>
+          <p className="text-xl font-semibold text-slate-400">
+            Sin pedidos {station !== "all" ? `en ${station}` : "pendientes"}
+          </p>
           <p className="mt-1 text-sm text-slate-600">Los nuevos pedidos aparecen automáticamente</p>
         </div>
-      ) : view === "columns" ? (
-        /* Column KDS layout */
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:gap-0 h-[calc(100vh-64px)]">
-          {columns.map((col) => (
-            <div key={col.title} className={`flex flex-col border-b lg:border-b-0 lg:border-r border-[#1a1a1a] last:border-0`}>
-              {/* Column header */}
+      ) : viewMode === "items" ? (
+        /* Items view — 3 columns */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 h-[calc(100vh-64px)]">
+          {[
+            { title: "Pendiente", color: "text-amber-400", dot: "bg-amber-400", items: pendingItems },
+            { title: "Preparando", color: "text-orange-400", dot: "bg-orange-400", items: preparingItems },
+            { title: "Listo", color: "text-green-400", dot: "bg-green-400", items: readyItems },
+          ].map((col) => (
+            <div key={col.title} className="flex flex-col border-b lg:border-b-0 lg:border-r border-[#1a1a1a] last:border-0">
               <div className="flex items-center justify-between px-4 py-3 border-b border-[#1a1a1a] bg-[#111]">
                 <div className="flex items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${col.bgDot}`} />
+                  <span className={`h-2 w-2 rounded-full ${col.dot}`} />
                   <span className={`text-sm font-bold ${col.color}`}>{col.title}</span>
                 </div>
-                <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-xs font-bold text-[#666] tabular-nums">
-                  {col.count}
-                </span>
+                <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-xs font-bold text-[#666] tabular-nums">{col.items.length}</span>
               </div>
-
-              {/* Column body */}
               <div className="flex-1 overflow-y-auto p-3 space-y-3">
-                {col.orders.length === 0 ? (
-                  <p className="text-center text-xs text-[#333] py-8">Sin pedidos</p>
+                {col.items.length === 0 ? (
+                  <p className="text-center text-xs text-[#333] py-8">Sin items</p>
                 ) : (
-                  col.orders.map((order) => (
-                    <KDSCard
-                      key={order.id}
-                      order={order}
-                      onAction={() => col.onAction(order.id)}
-                      actionLabel={col.actionLabel}
-                      actionColor={col.actionColor}
-                    />
+                  col.items.map(({ item, order }) => (
+                    <ItemCard key={item.id} item={item} order={order} onMarkItem={handleMarkItem} />
                   ))
                 )}
               </div>
@@ -302,33 +428,11 @@ export default function CocinaPage() {
           ))}
         </div>
       ) : (
-        /* Grid layout (original) */
+        /* Orders view */
         <div className="p-4 lg:p-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:max-w-7xl lg:mx-auto">
-          {[...pending, ...inKitchen, ...ready].map((order) => {
-            const isPending = order.status === "pending";
-            const isInKitchen = order.status === "in_kitchen";
-            return (
-              <KDSCard
-                key={order.id}
-                order={order}
-                onAction={() =>
-                  isPending
-                    ? updateOrderStatus(order.id, "in_kitchen")
-                    : isInKitchen
-                      ? updateOrderStatus(order.id, "ready")
-                      : updateOrderStatus(order.id, "delivered")
-                }
-                actionLabel={isPending ? "Preparar" : isInKitchen ? "Listo para servir" : "Entregado"}
-                actionColor={
-                  isPending
-                    ? "bg-orange-600 hover:bg-orange-700"
-                    : isInKitchen
-                      ? "bg-green-600 hover:bg-green-700"
-                      : "bg-blue-600 hover:bg-blue-700"
-                }
-              />
-            );
-          })}
+          {kdsOrders.map((ko) => (
+            <OrderCard key={ko.order.id} kdsOrder={ko} onMarkItem={handleMarkItem} onMarkOrder={handleMarkOrder} />
+          ))}
         </div>
       )}
     </main>

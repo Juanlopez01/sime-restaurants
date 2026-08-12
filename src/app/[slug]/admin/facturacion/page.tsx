@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { formatPrice } from "@/lib/format";
 
 interface DailySummaryData {
   date: string;
@@ -88,11 +89,11 @@ export default function FacturacionPage() {
         <div className="stat-card">
           <p className="stat-label">Total cobrado</p>
           <p className="stat-value !text-[#b49a5a]">
-            ${summary.total_sales.toLocaleString("es-AR")}
+            {formatPrice(summary.total_sales)}
           </p>
           {summary.active_sales > 0 && (
             <p className="stat-detail !text-[#b49a5a]">
-              + ${summary.active_sales.toLocaleString("es-AR")} pendiente
+              + {formatPrice(summary.active_sales)} pendiente
             </p>
           )}
         </div>
@@ -105,7 +106,7 @@ export default function FacturacionPage() {
             <div key={method} className="flex items-center justify-between">
               <span className="text-sm text-ink-muted">{METHOD_LABELS[method] ?? method}</span>
               <span className="text-sm font-semibold text-ink tabular-nums">
-                ${(amount as number).toLocaleString("es-AR")}
+                {formatPrice(amount as number)}
               </span>
             </div>
           ))}
@@ -121,12 +122,12 @@ export default function FacturacionPage() {
         <div className="p-5 space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-ink-muted">Ya facturado hoy</span>
-            <span className="font-medium text-ink tabular-nums">${summary.invoiced_amount.toLocaleString("es-AR")}</span>
+            <span className="font-medium text-ink tabular-nums">{formatPrice(summary.invoiced_amount)}</span>
           </div>
 
           <div className="flex items-center justify-between text-sm">
             <span className="text-ink-muted">Pendiente de facturar</span>
-            <span className="font-bold text-ink tabular-nums">${pendingToInvoice.toLocaleString("es-AR")}</span>
+            <span className="font-bold text-ink tabular-nums">{formatPrice(pendingToInvoice)}</span>
           </div>
 
           <div className="flex gap-2 pt-2">
@@ -144,7 +145,7 @@ export default function FacturacionPage() {
             <button
               onClick={() => {
                 const amount = parseInt(invoiceAmount) || pendingToInvoice;
-                alert(`Facturación ARCA: se facturaría $${amount.toLocaleString("es-AR")}\n\n(Integración ARCA pendiente)`);
+                alert(`Facturación ARCA: se facturaría ${formatPrice(amount)}\n\n(Integración ARCA pendiente)`);
               }}
               disabled={pendingToInvoice <= 0}
               className="btn-primary bg-blue-600 hover:bg-blue-700 px-6"

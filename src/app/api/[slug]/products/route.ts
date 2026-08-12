@@ -141,6 +141,7 @@ export async function PUT(
   if (body.price !== undefined) updates.price = body.price;
   if (body.description !== undefined) updates.description = body.description;
   if (body.is_available !== undefined) updates.is_available = body.is_available;
+  if (body.image_url !== undefined) updates.image_url = body.image_url;
 
   const { data, error } = await supabaseAdmin
     .from("products")

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
+import { formatPrice } from "@/lib/format";
 
 type Step = "menu" | "mesas" | "equipo";
 const STEPS: { key: Step; label: string; icon: string }[] = [
@@ -303,7 +304,7 @@ export default function OnboardingPage() {
                       >
                         <span className="text-sm text-white">{p.name}</span>
                         <span className="text-sm text-[#b49a5a] tabular-nums">
-                          ${p.price.toLocaleString("es-AR")}
+                          {formatPrice(p.price)}
                         </span>
                       </div>
                     ))}

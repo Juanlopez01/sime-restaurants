@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
+import { formatPrice } from "@/lib/format";
 
 interface Product {
   id: string;
   name: string;
   price: number;
   description: string | null;
+  image_url: string | null;
   is_available: boolean;
   category_id: string;
 }
@@ -16,6 +18,7 @@ interface Category {
   id: string;
   name: string;
   display_order?: number;
+  station?: string;
   products: Product[];
 }
 
@@ -54,6 +57,18 @@ export default function ProductosPage() {
       setNewCatName("");
     }
     setAddingCat(false);
+  }
+
+  async function toggleStation(catId: string) {
+    const cat = menu.find((c) => c.id === catId);
+    if (!cat) return;
+    const newStation = (cat.station ?? "cocina") === "cocina" ? "barra" : "cocina";
+    setMenu(menu.map((c) => c.id === catId ? { ...c, station: newStation } : c));
+    await fetch(`/api/${params.slug}/categories`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: catId, station: newStation }),
+    });
   }
 
   async function deleteCategory(catId: string) {
@@ -164,6 +179,44 @@ export default function ProductosPage() {
     });
   }
 
+  async function uploadProductImage(productId: string, categoryId: string, file: File) {
+    if (file.size > 5 * 1024 * 1024) {
+      setError("La imagen no puede superar 5MB");
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", "products");
+
+    const res = await fetch(`/api/${params.slug}/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      setMenu(
+        menu.map((c) =>
+          c.id === categoryId
+            ? {
+                ...c,
+                products: c.products.map((p) =>
+                  p.id === productId ? { ...p, image_url: data.url } : p
+                ),
+              }
+            : c
+        )
+      );
+      await fetch(`/api/${params.slug}/products`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: productId, image_url: data.url }),
+      });
+    }
+  }
+
   if (loading) {
     return (
       <main className="p-6 flex items-center justify-center min-h-[200px]">
@@ -248,6 +301,17 @@ export default function ProductosPage() {
             </button>
             <div className="flex items-center gap-0.5 pr-3">
               <button
+                onClick={() => toggleStation(cat.id)}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold transition-colors ${
+                  (cat.station ?? "cocina") === "barra"
+                    ? "bg-purple-50 text-purple-700"
+                    : "bg-orange-50 text-orange-700"
+                }`}
+                title="Cambiar estación"
+              >
+                {(cat.station ?? "cocina") === "barra" ? "Barra" : "Cocina"}
+              </button>
+              <button
                 onClick={() => moveCategoryOrder(cat.id, -1)}
                 disabled={catIdx === 0}
                 className="p-1.5 text-ink-faint hover:text-ink disabled:opacity-20 transition-colors"
@@ -282,45 +346,15 @@ export default function ProductosPage() {
           {expandedCat === cat.id && (
             <div className="border-t border-[#e8e6e1]">
               {cat.products.map((product) => (
-                <div
+                <ProductRow
                   key={product.id}
-                  className="flex items-center justify-between px-5 py-3.5 border-b border-[#f5f3ee] last:border-b-0"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2.5">
-                      <span className={`text-sm font-medium ${!product.is_available ? "line-through text-ink-faint" : "text-ink"}`}>
-                        {product.name}
-                      </span>
-                      <span className="text-sm text-[#b49a5a] tabular-nums font-semibold">
-                        ${product.price.toLocaleString("es-AR")}
-                      </span>
-                    </div>
-                    {product.description && (
-                      <p className="text-xs text-ink-faint truncate mt-0.5">{product.description}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => toggleAvailability(product.id, cat.id)}
-                      className={`badge transition-colors ${
-                        product.is_available
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-red-50 text-red-600"
-                      }`}
-                    >
-                      {product.is_available ? "Disponible" : "Agotado"}
-                    </button>
-                    <button
-                      onClick={() => deleteProduct(product.id, cat.id)}
-                      className="p-1.5 text-ink-faint hover:text-red-500 transition-colors"
-                      title="Eliminar producto"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
-                        <path d="M18 6L6 18M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
+                  product={product}
+                  categoryId={cat.id}
+                  slug={params.slug}
+                  onToggle={() => toggleAvailability(product.id, cat.id)}
+                  onDelete={() => deleteProduct(product.id, cat.id)}
+                  onUploadImage={(file) => uploadProductImage(product.id, cat.id, file)}
+                />
               ))}
 
               {showProductForm === cat.id ? (
@@ -377,5 +411,110 @@ export default function ProductosPage() {
         </div>
       ))}
     </main>
+  );
+}
+
+function ProductRow({
+  product,
+  onToggle,
+  onDelete,
+  onUploadImage,
+}: {
+  product: Product;
+  categoryId: string;
+  slug: string;
+  onToggle: () => void;
+  onDelete: () => void;
+  onUploadImage: (file: File) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(file: File) {
+    setUploading(true);
+    await onUploadImage(file);
+    setUploading(false);
+  }
+
+  return (
+    <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[#f5f3ee] last:border-b-0">
+      {/* Product image */}
+      <div
+        onClick={() => fileRef.current?.click()}
+        className="relative h-12 w-12 flex-shrink-0 rounded-lg overflow-hidden cursor-pointer group border border-[#e8e6e1]"
+      >
+        {product.image_url ? (
+          <>
+            <img src={product.image_url} alt="" className="h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" className="h-3.5 w-3.5">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </div>
+          </>
+        ) : (
+          <div className="h-full w-full bg-[#f5f3ee] flex items-center justify-center text-[#ccc] group-hover:text-[#b49a5a] transition-colors">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+          </div>
+        )}
+        {uploading && (
+          <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#e8e6e1] border-t-[#b49a5a]" />
+          </div>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+            e.target.value = "";
+          }}
+        />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2.5">
+          <span className={`text-sm font-medium ${!product.is_available ? "line-through text-ink-faint" : "text-ink"}`}>
+            {product.name}
+          </span>
+          <span className="text-sm text-[#b49a5a] tabular-nums font-semibold">
+            {formatPrice(product.price)}
+          </span>
+        </div>
+        {product.description && (
+          <p className="text-xs text-ink-faint truncate mt-0.5">{product.description}</p>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onToggle}
+          className={`badge transition-colors ${
+            product.is_available
+              ? "bg-emerald-50 text-emerald-700"
+              : "bg-red-50 text-red-600"
+          }`}
+        >
+          {product.is_available ? "Disponible" : "Agotado"}
+        </button>
+        <button
+          onClick={onDelete}
+          className="p-1.5 text-ink-faint hover:text-red-500 transition-colors"
+          title="Eliminar producto"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
   );
 }

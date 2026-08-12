@@ -1,19 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase-server";
 import { DEMO_TABLES } from "@/lib/demo-data";
-
-async function getRestaurantId(slug: string): Promise<string | null> {
-  if (!isSupabaseConfigured) {
-    return slug === "la-ribera" ? "demo-la-ribera" : null;
-  }
-  const { data } = await supabaseAdmin
-    .from("restaurants")
-    .select("id")
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .single();
-  return data?.id ?? null;
-}
+import { getRestaurantId } from "@/lib/restaurant";
 
 export async function POST(
   request: NextRequest,

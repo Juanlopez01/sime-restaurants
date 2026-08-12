@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase-server";
+import { setMiseSession } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -135,15 +136,3 @@ export async function GET(request: NextRequest) {
   );
 }
 
-function setMiseSession(
-  response: NextResponse,
-  data: Record<string, string>
-) {
-  response.cookies.set("mise-session", JSON.stringify(data), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
-}

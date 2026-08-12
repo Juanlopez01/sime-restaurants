@@ -17,7 +17,8 @@ export const DEMO_RESTAURANT: Restaurant = {
 
 let catId = 0;
 let prodId = 0;
-const cat = (name: string) => `cat-${++catId}`;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const cat = (_name: string) => `cat-${++catId}`;
 const prod = () => `prod-${++prodId}`;
 
 const BASE = {

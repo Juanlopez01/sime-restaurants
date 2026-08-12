@@ -60,6 +60,7 @@ export function FloorEditor({ tables, slug, onTablesChange }: FloorEditorProps) 
       height: 80,
       shape: "square",
       capacity: 4,
+      assigned_waiter_id: null,
       is_active: true,
       created_at: "",
       updated_at: "",

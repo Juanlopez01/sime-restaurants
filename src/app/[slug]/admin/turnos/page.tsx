@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { formatPrice } from "@/lib/format";
 
 interface Shift {
   id: string;
@@ -149,7 +150,7 @@ export default function TurnosPage() {
                       </span>
                     </div>
                     <span className="text-xs text-emerald-700">
-                      {elapsed}h abierto · Inicio: ${Number(shift.opening_amount).toLocaleString("es-AR")}
+                      {elapsed}h abierto · Inicio: {formatPrice(Number(shift.opening_amount))}
                     </span>
                   </div>
                   <button
@@ -176,20 +177,20 @@ export default function TurnosPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
             <div className="rounded-lg bg-[#f5f3ee] p-3">
               <span className="text-[10px] uppercase tracking-wider text-[#999]">Apertura</span>
-              <p className="text-lg font-bold tabular-nums text-[#1a1a1a]">${Number(closedShift.opening_amount).toLocaleString("es-AR")}</p>
+              <p className="text-lg font-bold tabular-nums text-[#1a1a1a]">{formatPrice(Number(closedShift.opening_amount))}</p>
             </div>
             <div className="rounded-lg bg-[#f5f3ee] p-3">
               <span className="text-[10px] uppercase tracking-wider text-[#999]">Ventas</span>
-              <p className="text-lg font-bold tabular-nums text-[#1a1a1a]">${Number(closedShift.total_sales ?? 0).toLocaleString("es-AR")}</p>
+              <p className="text-lg font-bold tabular-nums text-[#1a1a1a]">{formatPrice(Number(closedShift.total_sales ?? 0))}</p>
             </div>
             <div className="rounded-lg bg-[#f5f3ee] p-3">
               <span className="text-[10px] uppercase tracking-wider text-[#999]">Propinas</span>
-              <p className="text-lg font-bold tabular-nums text-[#1a1a1a]">${Number(closedShift.total_tips ?? 0).toLocaleString("es-AR")}</p>
+              <p className="text-lg font-bold tabular-nums text-[#1a1a1a]">{formatPrice(Number(closedShift.total_tips ?? 0))}</p>
             </div>
             <div className={`rounded-lg p-3 ${(closedShift.difference ?? 0) >= 0 ? "bg-green-50" : "bg-red-50"}`}>
               <span className="text-[10px] uppercase tracking-wider text-[#999]">Diferencia</span>
               <p className={`text-lg font-bold tabular-nums ${(closedShift.difference ?? 0) >= 0 ? "text-green-700" : "text-red-600"}`}>
-                {(closedShift.difference ?? 0) >= 0 ? "+" : ""}${Number(closedShift.difference ?? 0).toLocaleString("es-AR")}
+                {(closedShift.difference ?? 0) >= 0 ? "+" : ""}{formatPrice(Number(closedShift.difference ?? 0))}
               </p>
             </div>
           </div>
@@ -201,7 +202,7 @@ export default function TurnosPage() {
                 {Object.entries(closedShift.payments_by_method).map(([m, amt]) => (
                   <div key={m} className="flex justify-between text-sm">
                     <span className="text-[#777]">{METHOD_LABELS[m] ?? m}</span>
-                    <span className="font-medium tabular-nums text-[#1a1a1a]">${Number(amt).toLocaleString("es-AR")}</span>
+                    <span className="font-medium tabular-nums text-[#1a1a1a]">{formatPrice(Number(amt))}</span>
                   </div>
                 ))}
               </div>
@@ -214,8 +215,8 @@ export default function TurnosPage() {
                 const w = window.open("", "_blank", "width=400,height=500");
                 if (!w) return;
                 const s = closedShift;
-                const methods = Object.entries(s.payments_by_method ?? {}).map(([m, a]) => `<tr><td>${METHOD_LABELS[m] ?? m}</td><td style="text-align:right">$${Number(a).toLocaleString("es-AR")}</td></tr>`).join("");
-                w.document.write(`<!DOCTYPE html><html><head><title>Cierre de caja</title><style>body{font-family:monospace;font-size:12px;width:350px;margin:0 auto;padding:16px}h2{text-align:center}hr{border:none;border-top:1px dashed #999;margin:8px 0}table{width:100%;border-collapse:collapse}td{padding:3px 0}.b{font-weight:bold}@media print{body{width:auto}}</style></head><body><h2>Cierre de Caja</h2><p style="text-align:center;color:#666">${s.cashier?.name} · ${new Date(s.opened_at).toLocaleString("es-AR")} - ${new Date(s.closed_at!).toLocaleString("es-AR")}</p><hr><table><tr><td>Apertura</td><td style="text-align:right">$${Number(s.opening_amount).toLocaleString("es-AR")}</td></tr><tr><td>Ventas</td><td style="text-align:right">$${Number(s.total_sales ?? 0).toLocaleString("es-AR")}</td></tr><tr><td>Propinas</td><td style="text-align:right">$${Number(s.total_tips ?? 0).toLocaleString("es-AR")}</td></tr><tr><td>Cierre</td><td style="text-align:right">$${Number(s.closing_amount ?? 0).toLocaleString("es-AR")}</td></tr><tr class="b"><td>Diferencia</td><td style="text-align:right">${(s.difference ?? 0) >= 0 ? "+" : ""}$${Number(s.difference ?? 0).toLocaleString("es-AR")}</td></tr></table><hr><table>${methods}</table>${s.notes ? `<p style="margin-top:8px;color:#666">Nota: ${s.notes}</p>` : ""}<script>window.print();</script></body></html>`);
+                const methods = Object.entries(s.payments_by_method ?? {}).map(([m, a]) => `<tr><td>${METHOD_LABELS[m] ?? m}</td><td style="text-align:right">${formatPrice(Number(a))}</td></tr>`).join("");
+                w.document.write(`<!DOCTYPE html><html><head><title>Cierre de caja</title><style>body{font-family:monospace;font-size:12px;width:350px;margin:0 auto;padding:16px}h2{text-align:center}hr{border:none;border-top:1px dashed #999;margin:8px 0}table{width:100%;border-collapse:collapse}td{padding:3px 0}.b{font-weight:bold}@media print{body{width:auto}}</style></head><body><h2>Cierre de Caja</h2><p style="text-align:center;color:#666">${s.cashier?.name} · ${new Date(s.opened_at).toLocaleString("es-AR")} - ${new Date(s.closed_at!).toLocaleString("es-AR")}</p><hr><table><tr><td>Apertura</td><td style="text-align:right">${formatPrice(Number(s.opening_amount))}</td></tr><tr><td>Ventas</td><td style="text-align:right">${formatPrice(Number(s.total_sales ?? 0))}</td></tr><tr><td>Propinas</td><td style="text-align:right">${formatPrice(Number(s.total_tips ?? 0))}</td></tr><tr><td>Cierre</td><td style="text-align:right">${formatPrice(Number(s.closing_amount ?? 0))}</td></tr><tr class="b"><td>Diferencia</td><td style="text-align:right">${(s.difference ?? 0) >= 0 ? "+" : ""}${formatPrice(Number(s.difference ?? 0))}</td></tr></table><hr><table>${methods}</table>${s.notes ? `<p style="margin-top:8px;color:#666">Nota: ${s.notes}</p>` : ""}<script>window.print();</script></body></html>`);
                 w.document.close();
               }}
               className="rounded-lg border border-[#e8e6e1] px-4 py-2 text-sm font-medium text-[#777] hover:bg-[#f5f3ee] transition-colors"
@@ -255,17 +256,17 @@ export default function TurnosPage() {
                       </span>
                     </td>
                     <td className="py-3 text-[#777] tabular-nums hidden sm:table-cell">
-                      ${Number(s.opening_amount).toLocaleString("es-AR")}
+                      {formatPrice(Number(s.opening_amount))}
                     </td>
                     <td className="py-3 text-right font-medium tabular-nums text-[#1a1a1a]">
-                      ${Number(s.total_sales ?? 0).toLocaleString("es-AR")}
+                      {formatPrice(Number(s.total_sales ?? 0))}
                     </td>
                     <td className="py-3 text-right tabular-nums text-[#777] hidden sm:table-cell">
-                      ${Number(s.total_tips ?? 0).toLocaleString("es-AR")}
+                      {formatPrice(Number(s.total_tips ?? 0))}
                     </td>
                     <td className="py-3 text-right tabular-nums">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${(s.difference ?? 0) >= 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
-                        {(s.difference ?? 0) >= 0 ? "+" : ""}${Number(s.difference ?? 0).toLocaleString("es-AR")}
+                        {(s.difference ?? 0) >= 0 ? "+" : ""}{formatPrice(Number(s.difference ?? 0))}
                       </span>
                     </td>
                   </tr>

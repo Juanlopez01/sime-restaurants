@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { useEffect, useState, useCallback } from "react";
+import { formatPrice } from "@/lib/format";
 
 const MODULES = [
   {
@@ -434,7 +435,7 @@ export default function RestaurantHome() {
                 },
                 {
                   label: "Ventas del día",
-                  value: stats ? `$${stats.totalSales.toLocaleString("es-AR")}` : "—",
+                  value: stats ? formatPrice(stats.totalSales) : "—",
                   icon: (
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
                       <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
@@ -453,7 +454,7 @@ export default function RestaurantHome() {
                 },
                 {
                   label: "Ticket promedio",
-                  value: stats ? `$${stats.avgTicket.toLocaleString("es-AR")}` : "—",
+                  value: stats ? formatPrice(stats.avgTicket) : "—",
                   icon: (
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
                       <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -541,7 +542,7 @@ export default function RestaurantHome() {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium tabular-nums text-[#777]">
-                            ${Number(order.subtotal).toLocaleString("es-AR")}
+                            {formatPrice(Number(order.subtotal))}
                           </span>
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.color}`}>
                             {s.label}
