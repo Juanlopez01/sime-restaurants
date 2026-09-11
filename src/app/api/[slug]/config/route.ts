@@ -21,6 +21,8 @@ export async function GET(
     return NextResponse.json({ error: "Restaurante no encontrado" }, { status: 404 });
   }
 
+  const bc = (restaurant.billing_config || {}) as Record<string, unknown>;
+
   return NextResponse.json({
     restaurant: {
       name: restaurant.name,
@@ -28,7 +30,15 @@ export async function GET(
       phone: restaurant.phone || "",
       logo_url: restaurant.logo_url || "",
       settings: restaurant.settings || { currency: "ARS", timezone: "America/Argentina/Buenos_Aires" },
-      billing_config: restaurant.billing_config || {},
+      billing_config: {
+        billing_type: bc.billing_type || "end_of_day",
+        cuit: bc.cuit || "",
+        razon_social: bc.razon_social || "",
+        punto_venta: bc.punto_venta || "",
+        environment: bc.environment || "testing",
+        has_cert: !!bc.cert,
+        has_key: !!bc.key,
+      },
       has_mp: !!restaurant.mp_access_token,
     },
   });
@@ -55,7 +65,16 @@ export async function PUT(
   if (body.phone !== undefined) updates.phone = body.phone;
   if (body.logo_url !== undefined) updates.logo_url = body.logo_url;
   if (body.settings !== undefined) updates.settings = body.settings;
-  if (body.billing_config !== undefined) updates.billing_config = body.billing_config;
+  if (body.billing_config !== undefined) {
+    const existing = (restaurant.billing_config || {}) as Record<string, unknown>;
+    const incoming = body.billing_config as Record<string, unknown>;
+    const merged = { ...existing, ...incoming };
+    delete merged.has_cert;
+    delete merged.has_key;
+    if (!incoming.cert) merged.cert = existing.cert;
+    if (!incoming.key) merged.key = existing.key;
+    updates.billing_config = merged;
+  }
   if (body.mp_access_token !== undefined) updates.mp_access_token = body.mp_access_token || null;
 
   const { error } = await supabaseAdmin

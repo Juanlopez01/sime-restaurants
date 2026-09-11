@@ -18,6 +18,14 @@ interface RestaurantConfig {
   };
   billing_config: {
     billing_type?: string;
+    cuit?: string;
+    razon_social?: string;
+    punto_venta?: string | number;
+    environment?: string;
+    has_cert?: boolean;
+    has_key?: boolean;
+    cert?: string;
+    key?: string;
   };
   has_mp: boolean;
   mp_access_token?: string;
@@ -439,6 +447,156 @@ export default function ConfigPage() {
                   {" "}→ Tu aplicación → Credenciales de producción
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* ARCA */}
+          <div className="flex items-start gap-4 pt-4 border-t border-[#e8e6e1]">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#2d5aa0]/10">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2d5aa0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+            </div>
+            <div className="flex-1 space-y-3">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-ink">ARCA (ex-AFIP)</p>
+                {config.billing_config?.has_cert && config.billing_config?.has_key && config.billing_config?.cuit && (
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Configurado</span>
+                )}
+              </div>
+              <p className="text-xs text-ink-faint">
+                Facturación electrónica — emitir facturas B y C con CAE
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-ink-muted mb-1.5">CUIT</label>
+                  <input
+                    type="text"
+                    value={config.billing_config?.cuit ?? ""}
+                    onChange={(e) =>
+                      setConfig({
+                        ...config,
+                        billing_config: { ...config.billing_config, cuit: e.target.value },
+                      })
+                    }
+                    placeholder="20-12345678-9"
+                    className="input text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-ink-muted mb-1.5">Razón social</label>
+                  <input
+                    type="text"
+                    value={config.billing_config?.razon_social ?? ""}
+                    onChange={(e) =>
+                      setConfig({
+                        ...config,
+                        billing_config: { ...config.billing_config, razon_social: e.target.value },
+                      })
+                    }
+                    placeholder="Mi Restaurante SRL"
+                    className="input text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-ink-muted mb-1.5">Punto de venta</label>
+                  <input
+                    type="number"
+                    value={config.billing_config?.punto_venta ?? ""}
+                    onChange={(e) =>
+                      setConfig({
+                        ...config,
+                        billing_config: {
+                          ...config.billing_config,
+                          punto_venta: e.target.value ? Number(e.target.value) : "",
+                        },
+                      })
+                    }
+                    placeholder="1"
+                    min={1}
+                    className="input text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-ink-muted mb-1.5">Entorno</label>
+                  <select
+                    value={config.billing_config?.environment ?? "testing"}
+                    onChange={(e) =>
+                      setConfig({
+                        ...config,
+                        billing_config: { ...config.billing_config, environment: e.target.value },
+                      })
+                    }
+                    className="input text-xs"
+                  >
+                    <option value="testing">Testing (homologación)</option>
+                    <option value="production">Producción</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-ink-muted mb-1.5">
+                  Certificado (.crt / .pem)
+                  {config.billing_config?.has_cert && !config.billing_config?.cert && (
+                    <span className="ml-2 text-emerald-600 font-normal">ya cargado</span>
+                  )}
+                </label>
+                <textarea
+                  value={config.billing_config?.cert ?? ""}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      billing_config: { ...config.billing_config, cert: e.target.value },
+                    })
+                  }
+                  placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
+                  rows={3}
+                  className="input text-[11px] font-mono resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-ink-muted mb-1.5">
+                  Clave privada (.key)
+                  {config.billing_config?.has_key && !config.billing_config?.key && (
+                    <span className="ml-2 text-emerald-600 font-normal">ya cargada</span>
+                  )}
+                </label>
+                <textarea
+                  value={config.billing_config?.key ?? ""}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      billing_config: { ...config.billing_config, key: e.target.value },
+                    })
+                  }
+                  placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----"
+                  rows={3}
+                  className="input text-[11px] font-mono resize-none"
+                />
+              </div>
+
+              <p className="text-[11px] text-ink-faint">
+                Generá el certificado desde{" "}
+                <a
+                  href="https://auth.afip.gob.ar/contribuyente_/login.xhtml"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#2d5aa0] hover:underline"
+                >
+                  ARCA/AFIP
+                </a>
+                {" "}→ Mis Aplicaciones Web → Administración de Certificados Digitales
+              </p>
             </div>
           </div>
         </div>

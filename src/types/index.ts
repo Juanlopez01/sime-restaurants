@@ -25,9 +25,10 @@ export interface BillingConfig {
   cuit?: string;
   razon_social?: string;
   punto_venta?: number;
-  cert_path?: string;
-  key_path?: string;
+  cert?: string;
+  key?: string;
   environment?: 'production' | 'testing';
+  billing_type?: string;
 }
 
 export interface RestaurantSettings {
